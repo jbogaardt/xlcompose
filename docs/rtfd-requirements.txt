@@ -1,3 +1,4 @@
 xlsxwriter
 pandas
 numpy
+numpydoc
