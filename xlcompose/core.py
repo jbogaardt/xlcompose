@@ -31,6 +31,7 @@ class _Workbook:
             self.exhibits = Tabs(('sheet1', self.exhibits))
         for sheet in self.exhibits:
             self._write(sheet[1], sheet[0])
+            self._set_worksheet_properties(sheet[1], sheet[0])
         self.writer.save()
         self.writer.close()
 
@@ -70,18 +71,16 @@ class _Workbook:
                 self._write_title(exhibit)
             if klass == 'Image':
                 self._write_image(exhibit)
-            #self._set_worksheet_properties(exhibit)
 
-    def set_worksheet_properties(self, exhibit):
+    def _set_worksheet_properties(self, exhibit, sheet):
         ''' Format column widths, headers footers, etc.'''
         # exhibit.worksheet.hide_gridlines(2)
+        exhibit.worksheet = self.writer.sheets[sheet]
         exhibit.worksheet.set_footer(self.footer)
         widths = [min(self.max_column_width, item)
-                  for item in exhibit.column_widths]
-        widths[0] = 18 if widths[0] < 18 else widths[0]
+                  for item in exhibit[1].column_widths]
         for num, item in enumerate(widths):
-            col = exhibit.start_col + exhibit.index + num
-            exhibit.worksheet.set_column(col, col, item)
+            exhibit.worksheet.set_column(num, num, item)
         if sum(widths) > self.max_portrait_width:
             exhibit.worksheet.set_landscape()
 
@@ -111,7 +110,12 @@ class _Workbook:
 
     def _write_image(self, exhibit):
         exhibit.worksheet.insert_image(
-            exhibit.start_row, exhibit.start_col, exhibit.data, exhibit.formats)
+            exhibit.start_row, exhibit.start_col, exhibit.data,
+            options=exhibit.formats)
+        exhibit.worksheet.merge_range(
+            exhibit.start_row, exhibit.start_col,
+            exhibit.start_row + exhibit.height - 1,
+            exhibit.start_col + exhibit.width - 1, '')
 
     def _write_header(self, exhibit):
         ''' Adds column headers to data table '''
@@ -144,7 +148,7 @@ class _Workbook:
                 value, index_format)
             exhibit.worksheet.set_column(
                 first_col=exhibit.start_col, last_col=exhibit.start_col,
-                width=exhibit.column_widths[exhibit.index])
+                width=exhibit.column_widths[0])
 
     def _register_formats(self, exhibit):
         """
@@ -219,6 +223,16 @@ class Title:
         self.index = False
         self.col_nums = False
         self.formats = {}
+
+    @property
+    def column_widths(self):
+        if hasattr(self, '_column_widths'):
+            return self._column_widths
+        return [0]*self.width
+
+    @column_widths.setter
+    def column_widths(self, value):
+        self._column_widths = value
 
     def __len__(self):
         return len(self.data)
@@ -449,7 +463,7 @@ class _Container():
         self.args = tuple([copy.deepcopy(item) for item in args])
         self._title_len = 0
         for item in self.args:
-            if item.__class__.__name__ == 'Title':
+            if item.__class__.__name__ in ['Title']:
                 self._title_len = len(item)
                 item.width = self.width
 
@@ -496,7 +510,7 @@ class Row(_Container):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for num, item in enumerate(self.args):
-            if item.__class__.__name__ == 'Title':
+            if item.__class__.__name__ in ['Title']:
                 self.args = Column(item, Row(*self.args[num + 1:])),
 
     @property
@@ -506,7 +520,7 @@ class Row(_Container):
     @property
     def width(self):
         return sum([item.width for item in self.args
-                    if item.__class__.__name__ != 'Title'])
+                    if item.__class__.__name__ not in ['Title']])
 
     @property
     def column_widths(self):
@@ -558,7 +572,7 @@ class Column(_Container):
     @property
     def width(self):
         return max([item.width for item in self.args
-                    if item.__class__.__name__ != 'Title'])
+                    if item.__class__.__name__ not in ['Title']])
 
     @property
     def column_widths(self):
