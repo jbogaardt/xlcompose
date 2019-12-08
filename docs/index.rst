@@ -35,7 +35,6 @@ Layout components include:
 
    modules
    examples
-   :caption: Contents:
 
 
 
