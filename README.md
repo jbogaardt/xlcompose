@@ -19,6 +19,7 @@ There are several classes that allow for the export of data from Python:
 * `Image` - A class for exporting images
 * `Title` - A convenience class around a Series for titling
 
+
 Layout components include:
 * `Row` - A class for laying out other components horizontally
 * `Column` - A class for laying our other components vertically
