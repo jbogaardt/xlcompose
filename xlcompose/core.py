@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import copy
 import json
 
@@ -41,8 +42,8 @@ class _Workbook:
             exhibit = Column(t, exhibit)
             self._write(exhibit, sheet, start_row, start_col)
         elif klass in ['Row', 'Column']:
-            start_row = start_row + exhibit.margin[0]
-            start_col = start_col + exhibit.margin[3]
+            start_row = start_row
+            start_col = start_col
             for item in exhibit.args:
                 self._write(item, sheet, start_row, start_col)
                 if klass == 'Column':
@@ -58,14 +59,14 @@ class _Workbook:
             except:
                 pd.DataFrame().to_excel(self.writer, sheet_name=exhibit.sheet_name)
                 exhibit.worksheet = self.writer.sheets[exhibit.sheet_name]
-            if klass in ['DataFrame', 'HSpacer', 'VSpacer']:
+            if klass in ['DataFrame', 'RSpacer', 'CSpacer']:
                 if exhibit.header:
                     self._write_header(exhibit)
                 if exhibit.index:
                     self._write_index(exhibit)
                 self._register_formats(exhibit)
                 self._write_data(exhibit)
-            if klass == '_Title':
+            if klass == 'Title':
                 self._write_title(exhibit)
             #self._set_worksheet_properties(exhibit)
 
@@ -83,8 +84,8 @@ class _Workbook:
             exhibit.worksheet.set_landscape()
 
     def _write_title(self, exhibit):
-        start_row = exhibit.start_row + exhibit.margin[0]
-        start_col = exhibit.start_col + exhibit.margin[3]
+        start_row = exhibit.start_row
+        start_col = exhibit.start_col
         end_row = start_row + exhibit.height
         end_col = start_col + exhibit.width - 1
         row_rng = range(start_row, end_row)
@@ -109,8 +110,8 @@ class _Workbook:
         header_format = self.writer.book.add_format(header_format)
         for col_num, value in enumerate(headers):
             exhibit.worksheet.write(
-                exhibit.start_row + exhibit.margin[0],
-                col_num + exhibit.start_col + exhibit.margin[3],
+                exhibit.start_row,
+                col_num + exhibit.start_col,
                 value, header_format)
             if exhibit.col_nums:
                 exhibit.worksheet.write(
@@ -124,9 +125,12 @@ class _Workbook:
         for row_num, value in enumerate(exhibit.data.index.astype(str)):
             exhibit.worksheet.write(
                 row_num + exhibit.start_row + exhibit.header + \
-                exhibit.col_nums + exhibit.margin[0],
-                exhibit.start_col + exhibit.margin[3],
+                exhibit.col_nums,
+                exhibit.start_col,
                 value, index_format)
+            exhibit.worksheet.set_column(
+                first_col=exhibit.start_col, last_col=exhibit.start_col,
+                width=exhibit.column_widths[exhibit.index])
 
     def _register_formats(self, exhibit):
         """
@@ -154,54 +158,60 @@ class _Workbook:
             exhibit.formats[k] = self.formats[json.dumps(v)]
 
     def _write_data(self, exhibit):
-        start_row = exhibit.start_row + exhibit.col_nums + exhibit.header + \
-                    exhibit.margin[0]
-        start_col = exhibit.start_col + exhibit.index + exhibit.margin[3]
+        start_row = exhibit.start_row + exhibit.col_nums + exhibit.header
+        start_col = exhibit.start_col + exhibit.index
         end_row = start_row + exhibit.data.shape[0]
         end_col = start_col + exhibit.data.shape[1]
         row_rng = range(start_row, end_row)
         col_rng = range(start_col, end_col)
         d = exhibit.data.fillna('').values
         for c in col_rng:
-            c_idx = c - exhibit.index - exhibit.start_col - exhibit.margin[3]
+            c_idx = c - exhibit.index - exhibit.start_col
             fmt = exhibit.formats[exhibit.data.columns[c_idx]]
             for r in row_rng:
                 r_idx = r - exhibit.col_nums - exhibit.header - \
-                        exhibit.start_row - exhibit.margin[0]
+                        exhibit.start_row
                 exhibit.worksheet.write(r, c, d[r_idx, c_idx], fmt)
                 if r == start_row:
                     exhibit.worksheet.set_column(
                         first_col=c, last_col=c,
-                        width=exhibit.column_widths[c_idx])
+                        width=exhibit.column_widths[c_idx + exhibit.index])
 
+class Title:
+    """ Make cool looking titles yo
 
-class _Title:
-    def __init__(self, data, width, title_formats, margin):
+    Parameters
+    ----------
+    data : str or list of str
+        Title and subtitle texts
+    formats : list of dicts
+        Formats to be applied to the title
+    width :
+        The width the title should span
+    """
+    def __init__(self, data, formats=[], width=None):
         if type(data) is str:
             data = [data]
         self.data = pd.DataFrame(data)
-        self.title_formats = title_formats
+        self.title_formats = self._set_title_format(formats)
         self.width = width
         self.height = len(self.data)
         self.header = False
         self.index = False
         self.col_nums = False
-        self.margin = margin
         self.formats = {}
 
     def __len__(self):
         return len(self.data)
 
-    @staticmethod
-    def _default_title_format():
+    def _default_title_format(self):
         return [{'font_size': 20, 'align': 'center'},
                 {'font_size': 16, 'align': 'center'},
                 {'font_size': 16, 'align': 'center'}] + \
                [{'font_size': 13, 'align': 'center'}]*10
 
-    @staticmethod
-    def _set_title_format(overlay):
-        original = _Title._default_title_format()
+    def _set_title_format(self, overlay):
+        original = self._default_title_format()
         if overlay is not None:
             if type(overlay) is list:
                 for num, item in enumerate(overlay):
@@ -241,9 +251,7 @@ class DataFrame:
     title : list
         A list of strings up to length 4 (Title, subtitle1, subtitle2,
         subtitle3) to be placed above the data in the exhibit.
-    title_formats : list of dicts
-        Formats to be applied to the title.  title_formats length must equal
-        the title length
+
     """
 
     min_numeric_col_width = 12
@@ -254,11 +262,7 @@ class DataFrame:
     def __init__(self, data, formats=None,
                  header=True, header_formats=None, col_nums=False,
                  index=True, index_label='', index_formats=None,
-                 title=None, title_formats=None,
-                 column_widths=None, margin=None):
-        self.title_formats = _Title._set_title_format(title_formats)
-        if type(title) is list:
-            self.title_formats = self.title_formats[:len(title)]
+                 title=None, column_widths=None):
         self.index_formats = {
             'num_format': '0;(0)', 'text_wrap': True,
             'bold': True, 'valign': 'bottom', 'align': 'center'}
@@ -267,7 +271,6 @@ class DataFrame:
             'bold': True, 'valign': 'bottom', 'align': 'center'}
         if type(data) is not pd.DataFrame:
             data = data.to_frame()
-        self.margin = _Container._set_margin(margin)
         self.data = data
         self.header = header
         self.index = index
@@ -278,18 +281,12 @@ class DataFrame:
             self.column_widths = self.get_column_widths()
         else:
             self.column_widths = column_widths
-        self.height = data.shape[0] + self.col_nums + self.header + \
-                      self.margin[0] + self.margin[2]
-        self.width = data.shape[1] + self.index + self.margin[1] + \
-                     self.margin[3]
+        self.height = data.shape[0] + self.col_nums + self.header
+        self.width = data.shape[1] + self.index
         if title is None or title == []:
             title = None
         else:
             self.height = self.height + len(title)
-            title = _Title(
-                title, width=data.shape[1] + self.index,
-                title_formats=self.title_formats,
-                margin=(self.margin[0], 0, 0, self.margin[3]))
         self.title = title
 
         if header_formats is not None:
@@ -310,25 +307,34 @@ class DataFrame:
 
     def get_column_widths(self):
         """ Default column widths """
-        header_w = [max([len(token) for token in str(item).split(' ')])
-                    * self.col_padding_multiplier
-                    for item in self.data.columns]
+        if self.index:
+            row_w = [max(self.data.index.astype(str).str.len())]
+            header_w = [max([len(token)
+                             for token in str(self.index_label).split(' ')])]
+        else:
+            row_w = []
+            header_w = []
+        headers = list(self.data.columns)
+        header_w = header_w + \
+                   [max([len(token) for token in str(item).split(' ')])
+                    for item in headers]
         numeric_cols = self.data.select_dtypes('number').columns
-        row_w = [(self.min_numeric_col_width if item in numeric_cols
-                  else max(self.data[item].astype(str).str.len())
-                  * self.col_padding_multiplier)
-                 for item in self.data.columns]
-        return [max(item) for item in zip(header_w, row_w)]
+        row_w = row_w + \
+                [(self.min_numeric_col_width if item in numeric_cols
+                 else max(self.data[item].astype(str).str.len()))
+                 for item in headers]
+        return [max(item)* self.col_padding_multiplier
+                for item in zip(header_w, row_w)]
 
     def format_validation(self, formats):
         ''' Creates an Excel format compatible dictionary '''
         base_formats = {
-            'float64': {'num_format': '#,0.00'},
-            'float32': {'num_format': '#,0.00'},
-            'int64': {'num_format': '#,0'},
-            'int32': {'num_format': '#,0'},
-            '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm'},
-            'object': {'align': 'left'},
+            'float64': {'num_format': '#,0.00', 'align': 'center'},
+            'float32': {'num_format': '#,0.00', 'align': 'center'},
+            'int64': {'num_format': '#,0', 'align': 'center'},
+            'int32': {'num_format': '#,0', 'align': 'center'},
+            '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
+            'object': {'align': 'left', 'align': 'center'},
         }
         self.formats = {
             k: base_formats[v]
@@ -351,21 +357,21 @@ class DataFrame:
             pass
 
 
-class HSpacer(DataFrame):
+class RSpacer(DataFrame):
     """ Convenience class to create a horizontal spacer """
-    def __init__(self, width=1, column_widths=1.1):
-        data = pd.DataFrame(dict(zip(list(range(width)), [' ']*width)),
+    def __init__(self, spacers=1, column_widths=2.25):
+        data = pd.DataFrame(dict(zip(list(range(spacers)), [' '] * spacers)),
                             index=[0])
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
-        self.column_widths = [column_widths]*width
+        self.column_widths = [column_widths]*spacers
 
 
-class VSpacer(DataFrame):
+class CSpacer(DataFrame):
     """ Convenience class to create a vertical spacer """
-    def __init__(self, height=1, column_widths=1.1):
-        data = pd.DataFrame({' ': [' '] * height})
+    def __init__(self, spacers=1, column_widths=2.25):
+        data = pd.DataFrame({' ': [' '] * spacers})
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
@@ -376,31 +382,12 @@ class _Container():
     """ Base class for Row and Column
     """
     def __init__(self, *args, **kwargs):
-        if len(args) != len(set(args)):
-            self.args = tuple([copy.deepcopy(item) for item in args])
-        else:
-            self.args = args
-        self.margin = _Container._set_margin(kwargs.get('margin', None))
+        self.args = tuple([copy.deepcopy(item) for item in args])
         self._title_len = 0
-        if kwargs.get('title_formats', None) is not None:
-            self.title_formats = _Title._set_title_format(kwargs['title_formats'])
-            if type(kwargs['title']) is list:
-                self.title_formats = self.title_formats[:len(kwargs['title'])]
-        if kwargs.get('title', None) is not None:
-            if kwargs.get('title_formats', None) is None:
-                self.title_formats = _Title._default_title_format()
-            self.title = _Title(
-                kwargs['title'], width=self.width,
-                title_formats=self.title_formats, margin=(0, 0, 0, 0))
-            if getattr(self, 'title', None) is not None:
-                self._title_len = len(getattr(self, 'title'))
-
-
-        arg_title = [0]
-        for item in args:
-            if getattr(item, 'title', None) is not None:
-                arg_title.append(len(getattr(item, 'title')))
-        self._arg_title_len = arg_title
+        for item in self.args:
+            if item.__class__.__name__ == 'Title':
+                self._title_len = len(item)
+                item.width = self.width
 
     def __getitem__(self, key):
         return self.args[key]
@@ -419,17 +406,6 @@ class _Container():
         _Workbook(workbook_path=workbook_path, exhibits=self,
                   default_formats=default_formats).to_excel()
 
-    @staticmethod
-    def _set_margin(margin):
-        if type(margin) is int:
-            return (margin, margin, margin, margin)
-        elif margin is None:
-            return (0, 0, 0, 0)
-        elif type(margin) is tuple and len(margin) == 2:
-            return (margin[0], margin[1], margin[0], margin[1])
-        else:
-            return margin
-
 
 class Row(_Container):
     """
@@ -444,10 +420,6 @@ class Row(_Container):
     title: optional (str or list)
         The title to be displayed across the top of the container.  Must be
         specified using the keyword `title=`
-    margin:
-        Cell margins to put around the container.  Can be expressed as an int
-        or a 2-tuple or a 4-tuple.  The tuple style follows CSS margin guidelines
-        which generally start from the top and work around clockwise.
 
     Attributes
     ----------
@@ -457,16 +429,38 @@ class Row(_Container):
         Width of the container and is a function of the elements it contains
 
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for num, item in enumerate(self.args):
+            if item.__class__.__name__ == 'Title':
+                self.args = Column(item, Row(*self.args[num + 1:])),
+                #self._title_len = 0
+                #for item in self.args:
+                #    if item.__class__.__name__ == 'Title':
+                #        self._title_len = len(item)
+                #        item.width = self.width
+
     @property
     def height(self):
-        margin = self.margin[0] + self.margin[2]
-        return max([item.height for item in self.args]) + \
-               max(self._arg_title_len) + margin + self._title_len
+        return max([item.height for item in self.args])
 
     @property
     def width(self):
-        margin = self.margin[1] + self.margin[3]
-        return sum([item.width for item in self.args]) + margin
+        return sum([item.width for item in self.args
+                    if item.__class__.__name__ != 'Title'])
+
+    @property
+    def column_widths(self):
+        if hasattr(self, '_column_widths'):
+            return self._column_widths
+        column_widths = []
+        for item in [getattr(item, 'column_widths', []) for item in self.args]:
+            column_widths = column_widths + item
+        return column_widths
+
+    @column_widths.setter
+    def column_widths(self, value):
+        self._column_widths = value
 
 
 class Column(_Container):
@@ -482,10 +476,6 @@ class Column(_Container):
     title: optional (str or list)
         The title to be displayed across the top of the container.  Must be
         specified using the keyword `title=`
-    margin:
-        Cell margins to put around the container.  Can be expressed as an int
-        or a 2-tuple or a 4-tuple.  The tuple style follows CSS margin guidelines
-        which generally start from the top and work around clockwise.
 
     Attributes
     ----------
@@ -495,17 +485,38 @@ class Column(_Container):
         Width of the container and is a function of the elements it contains
 
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for item in self.args:
+            if item.__class__.__name__ not in ['Title']:
+                item.column_widths = self.column_widths
+
     @property
     def height(self):
-        margin = self.margin[0] + self.margin[2]
-        return sum([item.height for item in self.args]) + \
-               sum(self._arg_title_len) + margin + self._title_len
+        return sum([item.height for item in self.args])
+
 
     @property
     def width(self):
-        margin = self.margin[1] + self.margin[3]
-        return max([item.width for item in self.args]) + margin
+        return max([item.width for item in self.args
+                    if item.__class__.__name__ != 'Title'])
 
+    @property
+    def column_widths(self):
+        if hasattr(self, '_column_widths'):
+            return self._column_widths
+        data = np.array(
+            [item.column_widths for item in self.args
+             if item.__class__.__name__ not in ['Title']])
+        lens = np.array([len(i) for i in data])
+        mask = np.arange(lens.max()) < lens[:,None]
+        out = np.zeros(mask.shape, dtype=data.dtype)
+        out[mask] = np.concatenate(data)
+        return list(np.max(out, axis=0))
+
+    @column_widths.setter
+    def column_widths(self, value):
+        self._column_widths = value
 
 class Tabs:
     """
