@@ -66,8 +66,10 @@ class _Workbook:
                     self._write_index(exhibit)
                 self._register_formats(exhibit)
                 self._write_data(exhibit)
-            if klass == 'Title':
+            if klass in ['Title', 'Series']:
                 self._write_title(exhibit)
+            if klass == 'Image':
+                self._write_image(exhibit)
             #self._set_worksheet_properties(exhibit)
 
     def set_worksheet_properties(self, exhibit):
@@ -94,10 +96,22 @@ class _Workbook:
             v = self.default_formats.copy()
             v.update(item)
             title_format.append(self.writer.book.add_format(v))
-        for r in row_rng:
-            exhibit.worksheet.merge_range(
-                r, start_col, r, end_col, exhibit.data.iloc[r - start_row][0],
-                title_format[r - start_row])
+        if exhibit.width > 1:
+            for r in row_rng:
+                exhibit.worksheet.merge_range(
+                    r, start_col, r, end_col,
+                    exhibit.data.iloc[r - start_row][0],
+                    title_format[r - start_row])
+        else:
+            for r in row_rng:
+                exhibit.worksheet.write(
+                    r, start_col,
+                    exhibit.data.iloc[r - start_row][0],
+                    title_format[r - start_row])
+
+    def _write_image(self, exhibit):
+        exhibit.worksheet.insert_image(
+            exhibit.start_row, exhibit.start_col, exhibit.data, exhibit.formats)
 
     def _write_header(self, exhibit):
         ''' Adds column headers to data table '''
@@ -177,6 +191,11 @@ class _Workbook:
                         first_col=c, last_col=c,
                         width=exhibit.column_widths[c_idx + exhibit.index])
 
+
+class Sheet:
+    pass
+
+
 class Title:
     """ Make cool looking titles yo
 
@@ -193,7 +212,7 @@ class Title:
         if type(data) is str:
             data = [data]
         self.data = pd.DataFrame(data)
-        self.title_formats = self._set_title_format(formats)
+        self.title_formats = self._set_format(formats)
         self.width = width
         self.height = len(self.data)
         self.header = False
@@ -204,14 +223,14 @@ class Title:
     def __len__(self):
         return len(self.data)
 
-    def _default_title_format(self):
+    def _default_format(self):
         return [{'font_size': 20, 'align': 'center'},
                 {'font_size': 16, 'align': 'center'},
                 {'font_size': 16, 'align': 'center'}] + \
-               [{'font_size': 13, 'align': 'center'}]*10
+               [{'font_size': 13, 'align': 'center'}] * (len(self.data)-3)
 
-    def _set_title_format(self, overlay):
-        original = self._default_title_format()
+    def _set_format(self, overlay):
+        original = self._default_format()
         if overlay is not None:
             if type(overlay) is list:
                 for num, item in enumerate(overlay):
@@ -220,6 +239,51 @@ class Title:
                 for num, item in enumerate(original):
                     original[num].update(overlay)
         return original
+
+    def to_excel(self, workbook_path, default_formats=None):
+        """ Outputs object to Excel.
+
+        Parameters:
+        -----------
+        workbook_path : str
+            The target path and filename of the Excel document
+        """
+        _Workbook(workbook_path=workbook_path, exhibits=self,
+                  default_formats=default_formats).to_excel()
+
+class Series(Title):
+    def __init__(self, data, formats=[], width=1):
+        data = pd.Series(data).to_frame()
+        super().__init__(data, formats, width)
+
+    def _default_format(self):
+        base_formats = {
+            'float64': {'num_format': '#,0.00', 'align': 'center'},
+            'float32': {'num_format': '#,0.00', 'align': 'center'},
+            'int64': {'num_format': '#,0', 'align': 'center'},
+            'int32': {'num_format': '#,0', 'align': 'center'},
+            '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
+            'object': {'align': 'left', 'align': 'center'},
+        }
+        return [base_formats[str(self.data[0].dtype)]] * len(self.data)
+
+class Image:
+    def __init__(self, data, width=1, height=1, formats={}):
+        self.data = data
+        self.width = width
+        self.height = height
+        self.formats = formats
+
+    def to_excel(self, workbook_path, default_formats=None):
+        """ Outputs object to Excel.
+
+        Parameters:
+        -----------
+        workbook_path : str
+            The target path and filename of the Excel document
+        """
+        _Workbook(workbook_path=workbook_path, exhibits=self,
+                  default_formats=default_formats).to_excel()
 
 
 class DataFrame:
@@ -434,11 +498,6 @@ class Row(_Container):
         for num, item in enumerate(self.args):
             if item.__class__.__name__ == 'Title':
                 self.args = Column(item, Row(*self.args[num + 1:])),
-                #self._title_len = 0
-                #for item in self.args:
-                #    if item.__class__.__name__ == 'Title':
-                #        self._title_len = len(item)
-                #        item.width = self.width
 
     @property
     def height(self):
