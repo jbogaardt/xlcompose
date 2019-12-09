@@ -1,4 +1,4 @@
-[![Documentation Status](https://readthedocs.org/projects/xlcompose/badge/?version=master)](http://xlcompose.readthedocs.io/en/latest/?badge=master)
+[![Documentation Status](https://readthedocs.org/projects/xlcompose/badge/?version=latest)](https://xlcompose.readthedocs.io/en/latest/?badge=latest)
 
 # xlcompose
 A declarative API for composing spreadsheets from python that is built on
