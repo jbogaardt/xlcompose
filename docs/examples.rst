@@ -3,8 +3,8 @@
 .. currentmodule:: xlcompose
 
 
-Tutorial
-========
+Basic Tutorial
+==============
 
 Example output of Exhibits
 --------------------------
@@ -110,8 +110,8 @@ As with everything else, formats are adjustable through the `formats` argument.
    >>> xlc.DataFrame(df, title=xlc.Title(title, formats=title_formats)).to_excel('workbook.xlsx')
 
 
-Laying out composite objects
-============================
+Layouts
+=======
 
 While the addition of formats, titles and column numbering provide a little more
 flexibility that can be obtained from ``pd.DataFrame.to_excel``, xlcompose

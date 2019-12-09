@@ -284,6 +284,19 @@ class Series(Title):
         return [base_formats[str(self.data[0].dtype)]] * len(self.data)
 
 class Image:
+    """ Image allows for the embedding of images into a spreadsheet
+
+    Parameters
+    ----------
+    data : str
+        path to the image file, e.g. sample.png or ./sample.jpg
+    width : int
+        the number of columns consumed by the image
+    height : int
+        the number of rows consumed by the image
+    formats : dict
+        xlsxwriter options for modifying the image
+    """
     def __init__(self, data, width=1, height=1, formats={}):
         self.data = data
         self.width = width
