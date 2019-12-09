@@ -212,7 +212,7 @@ class Title:
     width :
         The width the title should span
     """
-    def __init__(self, data, formats=[], width=None, column_widths=1):
+    def __init__(self, data, formats=[], width=None, column_widths=None):
         if type(data) is str:
             data = [data]
         self.data = pd.DataFrame(data)
@@ -223,7 +223,8 @@ class Title:
         self.index = False
         self.col_nums = False
         self.formats = {}
-        self._column_widths = [column_widths]*self.width
+        if column_widths is not None and width is not None:
+            self._column_widths = [column_widths]*self.width
 
     @property
     def column_widths(self):
@@ -367,7 +368,6 @@ class DataFrame:
         else:
             self.height = self.height + len(title)
         self.title = title
-
         if header_formats is not None:
             self.header_formats.update(header_formats)
         if index_formats is not None:
@@ -438,19 +438,19 @@ class DataFrame:
 
 class RSpacer(DataFrame):
     """ Convenience class to create a horizontal spacer """
-    def __init__(self, spacers=1, column_widths=2.25):
-        data = pd.DataFrame(dict(zip(list(range(spacers)), [' '] * spacers)),
+    def __init__(self, width=1, column_widths=2.25):
+        data = pd.DataFrame(dict(zip(list(range(width)), [' '] * width)),
                             index=[0])
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
-        self.column_widths = [column_widths]*spacers
+        self.column_widths = [column_widths] * width
 
 
 class CSpacer(DataFrame):
     """ Convenience class to create a vertical spacer """
-    def __init__(self, spacers=1, column_widths=2.25):
-        data = pd.DataFrame({' ': [' '] * spacers})
+    def __init__(self, height=1, column_widths=2.25):
+        data = pd.DataFrame({' ': [' '] * height})
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)

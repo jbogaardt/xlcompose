@@ -3,8 +3,8 @@
 .. currentmodule:: xlcompose
 
 
-Writing to Excel
-================
+Tutorial
+========
 
 Example output of Exhibits
 --------------------------
@@ -38,7 +38,7 @@ for the :class:`DataFrame`:
 
 **Example:**
    >>> # xlcompose
-   >>> xlc.DataFrame(df, header=False, index=True, index_label='Origin').to_excel('workbook.xlsx')
+   >>> xlc.DataFrame(df, header=True, index=False).to_excel('workbook.xlsx')
    >>> # vs
    >>> # pandas
    >>> df.to_excel('workbook.xlsx', header=False, index=True, index_label='Origin')
@@ -81,26 +81,26 @@ https://xlsxwriter.readthedocs.io/format.html
 Series
 ------
 A Series is a single column of data.  While the DataFrame assigns each of its
-columns to a column in a spreadsheet, you can have the column of data span
+columns to a column in a spreadsheet, you can have the Series column of data span
 multiple columns in a spreadsheet by passing a `width` argument.  Additionally,
-there ias a `column_width` argument which determines the column
+there is a `column_width` argument which determines the column
 width of each spreadsheet column used by the Series.
 
 **Example:**
    >>> s = pd.Series(['This Series', 'Spans Multiple', 'Columns'])
-   >>> xlc.Series(s, width=5).to_excel('workbook.xlsx')
+   >>> xlc.Series(s, width=5, column_widths=12).to_excel('workbook.xlsx')
 
 Title
 -----
-Title is a convenience class that behaves like a series.  It has its own default
+Title is a convenience class that behaves like a Series.  It has its own default
 formatting style.  When passed to other objects as the `title` argument, its width
-will take on the width of the other object.  However, it can be used as a stand-
-alone object much like the series
+will take on the width of the containing object.  However, it can be used as a stand-
+alone object much like the Series.
 
 **Example:**
    >>> title=['Sample Inventory',
    ...        'ACME Grocery Company']
-   >>> xlc.DataFrame(xlc, title=xlc.Title(title)).to_excel('workbook.xlsx')
+   >>> xlc.DataFrame(df, title=xlc.Title(title)).to_excel('workbook.xlsx')
 
 As with everything else, formats are adjustable through the `formats` argument.
 
