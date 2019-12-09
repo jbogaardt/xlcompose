@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/xlcompose/badge/?version=master)](http://xlcompose.readthedocs.io/en/latest/?badge=master)
+
 # xlcompose
 A declarative API for composing spreadsheets from python that is built on
 `xlsxwriter` and `pandas` and inspired by `bokeh`.
@@ -13,17 +15,16 @@ but it's imperative style can often lead to very verbose code.
 With `xlcompose`, Several components are provided
 through a set of classes to allow for highly composible spreadsheets.
 
-There are several classes that allow for the export of data from Python:
-* `Series` - A class with formatting options for pandas Series
-* `DataFrame` - A class with formatting options for pandas DataFrames
-* `Image` - A class for exporting images
-* `Title` - A convenience class around a Series for titling
+## Documentation
+Please visit the [Documentation](https://xlcompose.readthedocs.io/en/latest/) page for examples, how-tos, and source
+code documentation.
 
+## Installation
+To install using pip:
+`pip install xlcompose`
 
-Layout components include:
-* `Row` - A class for laying out other components horizontally
-* `Column` - A class for laying our other components vertically
-* `CSpacer` - A class for adding spacing between components in a Column
-* `RSpacer` - A class for adding spacing between components in a Row
-* `Sheet` - A class for specifying sheet options
-* `Tabs` - A class for laying out other components across sheets
+Alternatively, install directly from github:
+`pip install git+https://github.com/jbogaardt/xlcompose/`
+
+Note: This package requires Python 3.5 and later, xlsxwriter 1.1.8. and later,
+pandas 0.23.0 and later.

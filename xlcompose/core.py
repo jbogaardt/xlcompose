@@ -78,7 +78,7 @@ class _Workbook:
         exhibit.worksheet = self.writer.sheets[sheet]
         exhibit.worksheet.set_footer(self.footer)
         widths = [min(self.max_column_width, item)
-                  for item in exhibit[1].column_widths]
+                  for item in exhibit.column_widths]
         for num, item in enumerate(widths):
             exhibit.worksheet.set_column(num, num, item)
         if sum(widths) > self.max_portrait_width:
@@ -201,7 +201,7 @@ class Sheet:
 
 
 class Title:
-    """ Make cool looking titles yo
+    """ Make cool looking titles
 
     Parameters
     ----------
@@ -212,7 +212,7 @@ class Title:
     width :
         The width the title should span
     """
-    def __init__(self, data, formats=[], width=None):
+    def __init__(self, data, formats=[], width=None, column_widths=1):
         if type(data) is str:
             data = [data]
         self.data = pd.DataFrame(data)
@@ -223,6 +223,7 @@ class Title:
         self.index = False
         self.col_nums = False
         self.formats = {}
+        self._column_widths = [column_widths]*self.width
 
     @property
     def column_widths(self):
@@ -266,9 +267,9 @@ class Title:
                   default_formats=default_formats).to_excel()
 
 class Series(Title):
-    def __init__(self, data, formats=[], width=1):
+    def __init__(self, data, formats=[], width=1, column_widths=1):
         data = pd.Series(data).to_frame()
-        super().__init__(data, formats, width)
+        super().__init__(data, formats, width, column_widths)
 
     def _default_format(self):
         base_formats = {
@@ -277,7 +278,7 @@ class Series(Title):
             'int64': {'num_format': '#,0', 'align': 'center'},
             'int32': {'num_format': '#,0', 'align': 'center'},
             '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'object': {'align': 'left', 'align': 'center'},
+            'object': {'align': 'center'},
         }
         return [base_formats[str(self.data[0].dtype)]] * len(self.data)
 
@@ -412,7 +413,7 @@ class DataFrame:
             'int64': {'num_format': '#,0', 'align': 'center'},
             'int32': {'num_format': '#,0', 'align': 'center'},
             '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'object': {'align': 'left', 'align': 'center'},
+            'object': {'align': 'center'},
         }
         self.formats = {
             k: base_formats[v]

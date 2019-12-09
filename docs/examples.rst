@@ -23,9 +23,11 @@ pandas dataframe or a 2D tringle representation in the Dataframe to get access
 to this supercharged version.
 
 **Example:**
-   >>> import xlcompose as cl
-   >>> raa = cl.load_dataset('raa')
-   >>> xlc.DataFrame(raa).to_excel('workbook.xlsx')
+   >>> import pandas as pd
+   >>> import xlcompose as xlc
+   >>> df = pd.DataFrame([['Apple', 7, 3.00],['Orange', 12, 2.50],['Banana', 13, 2.00]],
+   >>>                   columns=['Fruit', 'Quantity', 'Cost'])
+   >>> xlc.DataFrame(df).to_excel('workbook.xlsx')
 
 This class is used exclusively for exporting to Excel and the normal
 ``pd.DataFrame`` should be used for any other purpose.  There are commonalities
@@ -36,29 +38,13 @@ for the :class:`DataFrame`:
 
 **Example:**
    >>> # xlcompose
-   >>> xlc.DataFrame(raa, header=False, index=True, index_label='Origin').to_excel('workbook.xlsx')
+   >>> xlc.DataFrame(df, header=False, index=True, index_label='Origin').to_excel('workbook.xlsx')
    >>> # vs
    >>> # pandas
-   >>> raa.to_frame().to_excel('workbook.xlsx', header=False, index=True, index_label='Origin')
+   >>> df.to_excel('workbook.xlsx', header=False, index=True, index_label='Origin')
 
 By placing the arguments at object initialization allows for the construction
-of composite objects as we will see later. ``pd.DataFrame.to_excel`` provides
-additional ``startrow`` and ``startcol`` arguments in the case where you want
-the dataframe exported anywhere other than cell A1.  `xlc.DataFrame.to_excel`
-replaces these with a single `margin` argument that behaves similarly to a
-Cascading Stylesheet margin.  The ``margin`` option can be expressed as an
-integer e.g. ``margin=1`` which will place empty cells around the dataframe.
-The ``margin`` can also be expressed as a tuple. ``margin=(1,0)`` puts a top
-and bottom set of cells, but not left and right. ``margin=(2,0,0,1)`` puts two
-empty rows above the dataframe and one to the left. Example comparison to
-``pd.DataFrame.to_excel``
-
-**Example:**
-   >>> # xlcompose
-   >>> xlc.DataFrame(raa, margin=(3,0,0,1)).to_excel('workbook.xlsx')
-   >>> # vs
-   >>> # pandas
-   >>> raa.to_frame().to_excel('workbook.xlsx', startrow=3, startcol=1)
+of composite objects as we will see later.
 
 **Formatting**
 
@@ -69,21 +55,21 @@ dictionaries.  You can specify a single set of formats for the entire dataframe:
 
 **Example:**
    >>> formats={'num_format':'#,#', 'font_color':'red'}
-   >>> xlc.DataFrame(raa, formats=formats).to_excel('workbook.xlsx')
+   >>> xlc.DataFrame(df, formats=formats).to_excel('workbook.xlsx')
 
 Alternatively, you can specify formats for each column individually using a
 nested dictionary.
 
 **Example:**
-   >>> formats={'Ultimate':{'num_format':'#,#', 'font_color':'red'},
-   ...          'Latest':  {'num_format':'#,0.00', 'bold':True}}
+   >>> formats={'Quantity':{'num_format':'#,#', 'font_color':'red'},
+   ...          'Cost':  {'num_format':'#,0.00', 'bold':True}}
 
 Formatting options exist for the `index` and `header`.  Simply pass the desired
 formats through using `index_formats` and `header_formats`.
 
 **Example:**
    >>> formats={'italic':True, 'font_color':'red'}
-   >>> xlc.DataFrame(raa, index_formats=formats).to_excel('workbook.xlsx')
+   >>> xlc.DataFrame(df, index_formats=formats).to_excel('workbook.xlsx')
 
    .. note::
       xlcompose already has default formats set up.  As you apply your own
@@ -92,25 +78,36 @@ formats through using `index_formats` and `header_formats`.
 For more information on available formats refer to
 https://xlsxwriter.readthedocs.io/format.html
 
-**Other Features**
-`xlc.DataFrame` also allows for adding a title and column numbering. Titles are
-expressed as a list:
+Series
+------
+A Series is a single column of data.  While the DataFrame assigns each of its
+columns to a column in a spreadsheet, you can have the column of data span
+multiple columns in a spreadsheet by passing a `width` argument.  Additionally,
+there ias a `column_width` argument which determines the column
+width of each spreadsheet column used by the Series.
 
 **Example:**
-   >>> title=['Sample Accident Year Triangle',
-   ...        'Sourced from Mack',
-   ...        'Evaluated as of Dec-1990']
-   >>> xlc.DataFrame(raa, title=title).to_excel('workbook.xlsx')
+   >>> s = pd.Series(['This Series', 'Spans Multiple', 'Columns'])
+   >>> xlc.Series(s, width=5).to_excel('workbook.xlsx')
 
-Many actuarial exhibits include column numbering for easier reference.
-This can be turned on using the `col_nums=True`.  As with everything else,
-formats are adjustable through the `title_formats` argument.
+Title
+-----
+Title is a convenience class that behaves like a series.  It has its own default
+formatting style.  When passed to other objects as the `title` argument, its width
+will take on the width of the other object.  However, it can be used as a stand-
+alone object much like the series
+
+**Example:**
+   >>> title=['Sample Inventory',
+   ...        'ACME Grocery Company']
+   >>> xlc.DataFrame(xlc, title=xlc.Title(title)).to_excel('workbook.xlsx')
+
+As with everything else, formats are adjustable through the `formats` argument.
 
 **Example:**
    >>> title_formats = [{'font_color': 'red'},
-   ...        {'font_color': 'green'},
-   ...        {'font_color': 'blue'}]
-   >>> xlc.DataFrame(raa, title=title, title_formats=title_formats).to_excel('workbook.xlsx')
+   ...                  {'font_color': 'green'}]
+   >>> xlc.DataFrame(df, title=xlc.Title(title, formats=title_formats)).to_excel('workbook.xlsx')
 
 
 Laying out composite objects
@@ -132,8 +129,8 @@ Rows and Columns
 
 **Example:**
    >>> col = xlc.Column(
-   ...     xlc.DataFrame(raa, margin=(0,0,1,0)),
-   ...     xlc.DataFrame(raa.link_ratio, formats={'italic': True})
+   ...     xlc.DataFrame(df),
+   ...     xlc.DataFrame(df, formats={'italic': True})
    ... )
    >>> col.to_excel('workbook.xlsx')
 
@@ -141,8 +138,8 @@ Rows and Columns
 
 **Example:**
    >>> xlc.Row(
-   ...     xlc.DataFrame(raa, margin=(0,0,1,0)),
-   ...     xlc.DataFrame(raa.link_ratio)
+   ...     xlc.DataFrame(df),
+   ...     xlc.DataFrame(df, formats={'italic': True})
    ... ).to_excel('workbook.xlsx')
 
 You can also nest ``Row`` and ``Column``  within rows and columns.  Nesting can
@@ -150,17 +147,32 @@ be a deep as you want allowing for a highly customized layout.
 **Example:**
    >>> xlc.Row(col, col).to_excel('workbook.xlsx')
 
-``Row`` and ``Column`` optionally take `title`, ``title_formats`` and `margin`
-keywords that function the same as those in ``xlc.DataFrame``.
+``Row`` and ``Column`` optionally take `title` keywords that function the same
+as those in ``xlc.DataFrame``.
 
 **Example:**
    >>> composite = xlc.Row(
-   ...     col, col,
-   ...     title=['This title spans both Column Objects'],
-   ...     title_formats=[{'underline': True}]
-   ...     margin=(0,1,0,0)
+   ...     xlc.Title(['This title spans both Column Objects'],
+   ...                formats=[{'underline': True}]),
+   ...     col, col
    ... )
    >>> composite.to_excel('workbook.xlsx')
+
+CSpacer and RSpacer
+-------------------
+Often spacing between separate components is desired.  For columns you can insert
+a CSpacer object and for rows you can insert an RSpacer object.  Like the `Series`
+the spacer objects have optional `width` and `column_widths` arguments for
+further customization.
+
+**Example:**
+   >>> composite = xlc.Row(
+   ...     xlc.Title(['This title spans both Column Objects'],
+   ...                     formats=[{'underline': True}]),
+   ...     col, xlc.RSpacer(width=2, column_widths=1.1), col,
+   ... )
+   >>> composite.to_excel('workbook.xlsx')
+
 
 Tabs
 ----
