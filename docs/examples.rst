@@ -11,7 +11,7 @@ Example output of Exhibits
 The following example highlights the general look of the outputs when using
 **xlcompose** to output to Excel.
 
-.. image:: ../_static/images/exhibits.PNG
+.. image:: ./_static/images/exhibits.PNG
 
 DataFrame
 ---------
