@@ -454,7 +454,7 @@ class DataFrame:
 
 
 class RSpacer(DataFrame):
-    """ Convenience class to create a horizontal spacer """
+    """ Convenience class to create a vertical spacer in a Row container"""
     def __init__(self, width=1, column_widths=2.25):
         data = pd.DataFrame(dict(zip(list(range(width)), [' '] * width)),
                             index=[0])
@@ -464,8 +464,12 @@ class RSpacer(DataFrame):
         self.column_widths = [column_widths] * width
 
 
+class Vspacer(RSpacer):
+    pass
+
+
 class CSpacer(DataFrame):
-    """ Convenience class to create a vertical spacer """
+    """ Convenience class to create a horizontal spacer in a Column container"""
     def __init__(self, height=1, column_widths=2.25):
         data = pd.DataFrame({' ': [' '] * height})
         temp = DataFrame(data, index=False, header=False)
@@ -473,6 +477,9 @@ class CSpacer(DataFrame):
             setattr(self, k, v)
         self.column_widths = [column_widths]
 
+
+class HSpacer(CSpacer):
+    pass
 
 class _Container():
     """ Base class for Row and Column
