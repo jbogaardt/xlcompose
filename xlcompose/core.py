@@ -279,9 +279,12 @@ class Series(Title):
             'int64': {'num_format': '#,0', 'align': 'center'},
             'int32': {'num_format': '#,0', 'align': 'center'},
             '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
+            'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
             'object': {'align': 'center'},
         }
-        return [base_formats[str(self.data[0].dtype)]] * len(self.data)
+        return [base_formats.get(
+                    str(self.data[0].dtype), base_formats['object'])
+                ] * len(self.data)
 
 class Image:
     """ Image allows for the embedding of images into a spreadsheet
@@ -426,10 +429,11 @@ class DataFrame:
             'int64': {'num_format': '#,0', 'align': 'center'},
             'int32': {'num_format': '#,0', 'align': 'center'},
             '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
+            'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
             'object': {'align': 'center'},
         }
         self.formats = {
-            k: base_formats[v]
+            k: base_formats.get(v, base_formats['object'])
             for k, v in dict(self.data.dtypes.astype(str)).items()
         }
         if type(formats) is list:
