@@ -8,7 +8,7 @@ from os import listdir
 descr = "A declarative API for composing spreadsheets from python"
 name = 'xlcompose'
 url = 'https://github.com/jbogaardt/xlcompose'
-version='0.1.3' # Put this in __init__.py
+version='0.1.4' # Put this in __init__.py
 
 data_path = ''
 setup(

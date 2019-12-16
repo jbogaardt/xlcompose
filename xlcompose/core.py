@@ -466,7 +466,7 @@ class RSpacer(DataFrame):
         self.column_widths = [column_widths] * width
 
 
-class Vspacer(RSpacer):
+class VSpacer(RSpacer):
     pass
 
 
