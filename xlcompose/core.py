@@ -448,6 +448,8 @@ class DataFrame:
                     self.data.columns,
                     [formats] * len(self.data.columns))))
             else:
+                formats = {k: v if type(v) is dict else {'num_format': v}
+                           for k, v in formats.items()}
                 self.formats.update(formats)
         else:
             pass
