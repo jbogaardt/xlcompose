@@ -74,15 +74,26 @@ class _Workbook:
 
     def _set_worksheet_properties(self, exhibit, sheet):
         ''' Format column widths, headers footers, etc.'''
-        # exhibit.worksheet.hide_gridlines(2)
         exhibit.worksheet = self.writer.sheets[sheet]
-        exhibit.worksheet.set_footer(self.footer)
         widths = [min(self.max_column_width, item)
                   for item in exhibit.column_widths]
         for num, item in enumerate(widths):
             exhibit.worksheet.set_column(num, num, item)
+        kwargs = exhibit.kwargs
+        if kwargs.get('set_header', None) is not None:
+            exhibit.worksheet.set_header(kwargs['set_header'])
+        if kwargs.get('set_footer', None) is not None:
+            exhibit.worksheet.set_footer(kwargs['set_footer'])
+        if kwargs.get('repeat_rows', None) is not None:
+            exhibit.worksheet.repeat_rows(*kwargs['repeat_rows'])
+        if kwargs.get('fit_to_pages', None) is not None:
+            exhibit.worksheet.fit_to_pages(*kwargs['fit_to_pages'])
+        if kwargs.get('hide_gridlines', None) is not None:
+            exhibit.worksheet.hide_gridlines()
         if sum(widths) > self.max_portrait_width:
             exhibit.worksheet.set_landscape()
+        else:
+            exhibit.worksheet.set_portrait()
 
     def _write_title(self, exhibit):
         start_row = exhibit.start_row
@@ -196,10 +207,6 @@ class _Workbook:
                         width=exhibit.column_widths[c_idx + exhibit.index])
 
 
-class Sheet:
-    pass
-
-
 class Title:
     """ Make cool looking titles
 
@@ -212,7 +219,7 @@ class Title:
     width :
         The width the title should span
     """
-    def __init__(self, data, formats=[], width=None, column_widths=None):
+    def __init__(self, data, formats=[], width=None, column_widths=None, *args, **kwargs):
         if type(data) is str:
             data = [data]
         self.data = pd.DataFrame(data)
@@ -225,6 +232,7 @@ class Title:
         self.formats = {}
         if column_widths is not None and width is not None:
             self._column_widths = [column_widths]*self.width
+        self.kwargs = kwargs
 
     @property
     def column_widths(self):
@@ -300,11 +308,12 @@ class Image:
     formats : dict
         xlsxwriter options for modifying the image
     """
-    def __init__(self, data, width=1, height=1, formats={}):
+    def __init__(self, data, width=1, height=1, formats={}, *args, **kwargs):
         self.data = data
         self.width = width
         self.height = height
         self.formats = formats
+        self.kwargs = kwargs
 
     def to_excel(self, workbook_path, default_formats=None):
         """ Outputs object to Excel.
@@ -358,7 +367,7 @@ class DataFrame:
     def __init__(self, data, formats=None,
                  header=True, header_formats=None, col_nums=False,
                  index=True, index_label='', index_formats=None,
-                 title=None, column_widths=None):
+                 title=None, column_widths=None, *args, **kwargs):
         self.index_formats = {
             'num_format': '0;(0)', 'text_wrap': True,
             'bold': True, 'valign': 'bottom', 'align': 'center'}
@@ -388,6 +397,7 @@ class DataFrame:
             self.header_formats.update(header_formats)
         if index_formats is not None:
             self.index_formats.update(index_formats)
+        self.kwargs = kwargs
 
     def to_excel(self, workbook_path, default_formats=None):
         """ Outputs object to Excel.
@@ -457,13 +467,14 @@ class DataFrame:
 
 class RSpacer(DataFrame):
     """ Convenience class to create a vertical spacer in a Row container"""
-    def __init__(self, width=1, column_widths=2.25):
+    def __init__(self, width=1, column_widths=2.25, *args, **kwargs):
         data = pd.DataFrame(dict(zip(list(range(width)), [' '] * width)),
                             index=[0])
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
         self.column_widths = [column_widths] * width
+        self.kwargs = kwargs
 
 
 class VSpacer(RSpacer):
@@ -472,12 +483,13 @@ class VSpacer(RSpacer):
 
 class CSpacer(DataFrame):
     """ Convenience class to create a horizontal spacer in a Column container"""
-    def __init__(self, height=1, column_widths=2.25):
+    def __init__(self, height=1, column_widths=2.25, *args, **kwargs):
         data = pd.DataFrame({' ': [' '] * height})
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
         self.column_widths = [column_widths]
+        self.kwargs = kwargs
 
 
 class HSpacer(CSpacer):
@@ -493,6 +505,7 @@ class _Container():
             if item.__class__.__name__ in ['Title']:
                 self._title_len = len(item)
                 item.width = self.width
+        self.kwargs = kwargs
 
     def __getitem__(self, key):
         return self.args[key]
@@ -636,6 +649,7 @@ class Tabs:
                                for item in args])
         else:
             self.args = args
+        self.kwargs = kwargs
 
     def __getitem__(self, key):
         return self.args[key]
