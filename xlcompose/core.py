@@ -31,6 +31,7 @@ class _Workbook:
             self.exhibits = Tabs(('sheet1', self.exhibits))
         for sheet in self.exhibits:
             self._write(sheet[1], sheet[0])
+            sheet[1].kwargs.update(self.exhibits.kwargs)
             self._set_worksheet_properties(sheet[1], sheet[0])
         self.writer.save()
         self.writer.close()
