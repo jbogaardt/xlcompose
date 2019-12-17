@@ -443,17 +443,19 @@ class DataFrame:
             'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
             'object': {'align': 'left'},
         }
+        cols = self.data.dtypes.reset_index().drop_duplicates().set_index('index').iloc[:,0].astype(str)
         self.formats = {
             k: base_formats.get(v, base_formats['object'])
-            for k, v in dict(self.data.dtypes.astype(str)).items()
+            for k, v in dict(cols).items()
         }
+
         if type(formats) is list:
             self.formats.update(dict(zip(self.data.columns, formats)))
         elif type(formats) is str:
             self.formats.update(dict(zip(
                 self.data.columns,
                 [{'num_format': formats}] * len(self.data.columns))))
-        elif type(formats) is dict:
+        elif type(formats) is dict and formats != {}:
             if list(formats.keys())[0] not in self.data.columns:
                 self.formats.update(dict(zip(
                     self.data.columns,
