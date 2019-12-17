@@ -289,7 +289,7 @@ class Series(Title):
             'int32': {'num_format': '#,0', 'align': 'center'},
             '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
             'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'object': {'align': 'center'},
+            'object': {'align': 'left'},
         }
         return [base_formats.get(
                     str(self.data[0].dtype), base_formats['object'])
@@ -441,7 +441,7 @@ class DataFrame:
             'int32': {'num_format': '#,0', 'align': 'center'},
             '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
             'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'object': {'align': 'center'},
+            'object': {'align': 'left'},
         }
         self.formats = {
             k: base_formats.get(v, base_formats['object'])
