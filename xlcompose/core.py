@@ -27,6 +27,7 @@ class _Workbook:
         workbook_path : str
             The target path and filename of the Excel document
         """
+        self.exhibits = copy.deepcopy(self.exhibits)
         if self.exhibits.__class__.__name__ != 'Tabs':
             self.exhibits = Tabs(('sheet1', self.exhibits))
         for sheet in self.exhibits:
@@ -389,10 +390,14 @@ class DataFrame:
             self.column_widths = column_widths
         self.height = data.shape[0] + self.col_nums + self.header
         self.width = data.shape[1] + self.index
+        if type(title) is str:
+            title = [title]
         if title is None or title == []:
             title = None
         else:
             self.height = self.height + len(title)
+        if type(title) is list:
+            title = Title(title)
         self.title = title
         if header_formats is not None:
             self.header_formats.update(header_formats)
@@ -443,7 +448,12 @@ class DataFrame:
             'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
             'object': {'align': 'left'},
         }
-        cols = self.data.dtypes.reset_index().drop_duplicates().set_index('index').iloc[:,0].astype(str)
+        if self.data.columns.name is not None:
+            idx = self.data.index.to_frame().dtypes
+            idx.index = [self.data.columns.name]
+        else:
+            idx = pd.Series()
+        cols = self.data.dtypes.append(idx)
         self.formats = {
             k: base_formats.get(v, base_formats['object'])
             for k, v in dict(cols).items()
