@@ -17,25 +17,18 @@ jobs:
         python-version: ['3.7'] #, '2.7']
     steps:
       - uses: actions/checkout@v1
-      - name: Checkout repo
-        with:
-          fetch-depth: 1
       - uses: goanpeca/setup-miniconda@v1
-      - name: Setup miniconda
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+      - name: Install repo and dependencies
         shell: sh -l {0}
         run: |
           conda info
           conda install pip
           conda install pandas
           conda install pytest pytest-cov
-          pytest
-      - name: Run pytest
-        shell: sh -l {0}
-        run: |
-          pip install .
+          python setup.py develop
           pytest --cov=. --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
