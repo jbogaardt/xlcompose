@@ -15,7 +15,7 @@ jobs:
         with:
           miniconda-version: 'latest'
           activate-environment: xlcompose
-      - name: Sh
+      - name: Install repo and dependencies
         shell: sh -l {0}
         run: |
           conda info
