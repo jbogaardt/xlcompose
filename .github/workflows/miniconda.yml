@@ -23,6 +23,7 @@ jobs:
       - name: Install repo and dependencies
         shell: sh -l {0}
         run: |
+          export PATH="$HOME/miniconda/bin:$PATH"
           conda info
           conda install pip
           conda install pandas
@@ -30,8 +31,7 @@ jobs:
       - name: Generate coverage report
         run: |
           conda install pytest pytest-cov
-          ls -la
-          $CONDA/bin/pytest --cov=./ --cov-report=xml
+          pytest --cov=./ --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
