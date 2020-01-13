@@ -26,6 +26,7 @@ jobs:
           conda info
           conda install pip
           conda install pandas
+          pwd
           python setup.py develop
       - name: Generate coverage report
         run: |
