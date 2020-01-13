@@ -19,7 +19,7 @@ jobs:
         shell: sh -l {0}
         run: |
           conda info
-          conda install pip
+          conda install pip numpy pandas scikit-learn
           conda list
       - name: Bash
         shell: bash -l {0}
