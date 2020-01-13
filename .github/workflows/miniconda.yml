@@ -19,7 +19,22 @@ jobs:
         shell: sh -l {0}
         run: |
           conda info
-          conda install pip pandas pytest 
+          conda install pip pandas
           conda list
           pip install xlcompose
-          
+          pip install pytest
+          pip install pytest-cov
+    steps:
+    - uses: actions/checkout@master
+    - name: Generate coverage report
+      run: |
+        pytest --cov=./ --cov-report=xml
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        yml: ./codecov.yml
+        fail_ci_if_error: true
