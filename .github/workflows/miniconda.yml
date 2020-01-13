@@ -1,22 +1,85 @@
-name: Install Miniconda
-shell: bash
-run: |
-  if [[ "${{ runner.os }}" = "Linux" ]]; then
-    MINICONDA_FILENAME=Miniconda3-latest-Linux-x86_64.sh
-    curl -o $MINICONDA_FILENAME "https://repo.continuum.io/miniconda/$MINICONDA_FILENAME"
-    bash ${MINICONDA_FILENAME} -b -f -p $HOME/miniconda3
-  elif [[ "${{ runner.os }}" = "macOS" ]]; then
-    MINICONDA_FILENAME=Miniconda3-latest-MacOSX-x86_64.sh
-    curl -o $MINICONDA_FILENAME "https://repo.continuum.io/miniconda/$MINICONDA_FILENAME"
-    bash ${MINICONDA_FILENAME} -b -f -p $HOME/miniconda3
-  elif [[ "${{ runner.os }}" = "Windows" ]]; then
-    MINICONDA_FILENAME=Miniconda3-latest-Windows-x86_64.exe
-    curl -o $MINICONDA_FILENAME "https://repo.continuum.io/miniconda/$MINICONDA_FILENAME"
-    ./Miniconda3-latest-Windows-x86_64.exe //InstallationType=JustMe //RegisterPython=0 //S
-  fi
+on:
+  push:
+    branches:
+    - '*'
+  pull_request:
+    branches:
+    - '*'
 
-name: Setup paths
-shell: bash
-run: |
-  echo "::add-path::$HOME/miniconda3/bin"
-  echo "::add-path::$HOME/miniconda3/Scripts"
+jobs:
+  example-2-linux:
+    name: Ex2 Linux
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          miniconda-version: 'latest'
+          activate-environment: foo
+      - name: Sh
+        shell: sh -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Bash
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: PowerShell Core
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+
+  example-2-mac:
+    name: Ex2 Mac
+    runs-on: 'macos-latest'
+    steps:
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          miniconda-version: 'latest'
+          activate-environment: foo
+      - name: Sh
+        shell: sh -l {0}
+        run: |
+          conda info
+          conda list
+      - name: Bash
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: PowerShell Core
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+
+  example-2-win:
+    name: Ex2 Windows
+    runs-on: 'windows-latest'
+    steps:
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          miniconda-version: 'latest'
+          activate-environment: foo
+      - name: Bash
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+      - name: PowerShell
+        shell: powershell
+        run: |
+          conda info
+          conda list
+      - name: PowerShell Core
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+      - name: Cmd.exe
+        shell: cmd /C CALL {0}
+        run: >-
+          conda info &&
+          conda list
