@@ -33,7 +33,7 @@ jobs:
           conda install pytest pytest-cov
           echo '--------------------------------------------------------------------------------'
           conda list pytest
-          /usr/share/minicondapytest --cov=./ --cov-report=xml
+          /usr/share/miniconda/pytest --cov=./ --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
