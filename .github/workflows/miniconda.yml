@@ -16,12 +16,12 @@ jobs:
         os: ['ubuntu-latest'] #, 'macos-latest', 'windows-latest']
         python-version: ['3.7'] #, '2.7']
     steps:
-      - name: Checkout repo
       - uses: actions/checkout@v1
+      - name: Checkout repo
         with:
           fetch-depth: 1
-      - name: Setup miniconda
       - uses: goanpeca/setup-miniconda@v1
+      - name: Setup miniconda
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
