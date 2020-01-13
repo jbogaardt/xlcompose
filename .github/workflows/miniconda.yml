@@ -26,8 +26,8 @@ jobs:
           conda info
           conda install pip
           conda install pandas
+      - uses: actions/checkout@v1
       - name: Generate coverage report
-        uses: actions/checkout@v1
         run: |
           conda install pytest pytest-cov
           echo 'Parent'
