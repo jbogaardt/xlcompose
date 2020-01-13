@@ -32,6 +32,7 @@ jobs:
           conda install pandas
           conda install pytest pytest-cov
           pytest
+      - name: Run pytest
         shell: sh -l {0}
         run: |
           pip install .
