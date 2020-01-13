@@ -26,7 +26,7 @@ jobs:
           conda info
           conda install pip
           conda install pandas
-          pip install xlcompose
+          python setup.py develop
       - name: Generate coverage report
         run: |
           conda install pytest pytest-cov
