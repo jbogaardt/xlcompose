@@ -18,11 +18,8 @@ jobs:
       - name: Sh
         shell: sh -l {0}
         run: |
-          conda config --set always_yes yes --set changeps1 no
-          conda update -q conda
-          conda install -q pandas
-          conda install -q -c conda-forge codecov;
-          conda info -a
+          conda info
+          conda install pip
           conda list
       - name: Bash
         shell: bash -l {0}
