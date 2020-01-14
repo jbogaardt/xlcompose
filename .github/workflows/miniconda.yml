@@ -22,7 +22,7 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
       - name: Install repo and dependencies
-        shell: sh -l {0}
+        shell: bash -l {0}
         run: |
           python setup.py develop
           conda install -q -c r --file r_requirements.txt;
