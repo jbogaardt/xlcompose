@@ -25,7 +25,7 @@ setup(
     description=descr,
     # long_description=open('README.md').read(),
     install_requires=[
-        "pandas",
+        "pandas<1.0",
         "xlsxwriter>=1.1.8",
     ],
 )
