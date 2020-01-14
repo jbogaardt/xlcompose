@@ -27,7 +27,6 @@ jobs:
           python setup.py develop
           conda install -q -c r --file requirements.txt
           conda install -q -c r --file r_requirements.txt
-          Rscript
           pytest --cov=. --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
