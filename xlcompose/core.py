@@ -175,7 +175,7 @@ class _Workbook:
             elif type(v) is str:
                 col_formats = {'num_format': v}
             else:
-                raise ValueError(f'Cannot infer format {v}')
+                raise ValueError('Cannot infer format ' + str(v))
             col_formats = self.default_formats.copy()
             col_formats.update(v)
             if self.formats.get(json.dumps(col_formats), None) is None:
