@@ -665,7 +665,7 @@ class Tabs:
         valid = ['Row', 'Column', 'Title', 'Series', 'DataFrame', 'Image']
         if len([item[1].__class__.__name__ for item in self.args
                 if item[1].__class__.__name__ not in valid]) > 0:
-             raise TypeError(f"Valid objects include {', '.join(valid)}")
+             raise TypeError('Valid objects include '  + ', '.join(valid))
         self.kwargs = kwargs
 
     def __getitem__(self, key):
