@@ -175,7 +175,7 @@ class _Workbook:
             elif type(v) is str:
                 col_formats = {'num_format': v}
             else:
-                raise ValueError(f'Cannot infer format {v}')
+                raise ValueError('Cannot infer format ' + str(v))
             col_formats = self.default_formats.copy()
             col_formats.update(v)
             if self.formats.get(json.dumps(col_formats), None) is None:
@@ -667,7 +667,7 @@ class Tabs:
         valid = ['Row', 'Column', 'Title', 'Series', 'DataFrame', 'Image']
         if len([item[1].__class__.__name__ for item in self.args
                 if item[1].__class__.__name__ not in valid]) > 0:
-             raise TypeError(f"Valid objects include {', '.join(valid)}")
+             raise TypeError('Valid objects include '  + ', '.join(valid))
         self.kwargs = kwargs
 
     def __getitem__(self, key):
