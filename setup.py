@@ -27,5 +27,7 @@ setup(
     install_requires=[
         "pandas",
         "xlsxwriter>=1.1.8",
+        "pyyaml",
+        "jinja2"
     ],
 )

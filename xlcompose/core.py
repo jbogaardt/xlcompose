@@ -652,16 +652,18 @@ class Tabs:
     ----------
     args:
         Children must be a tuple with a sheet name and any of chainlader
-        DataFrame, Row, and Column classes.  For example,
+        DataFrame, Row, Column, Image, or Sheet classes.  For example,
         ('sheet1', cl.DataFrame(data))
     """
 
     def __init__(self, *args, **kwargs):
         if len(args) != set([item[1] for item in args]):
-            self.args = tuple([(item[0], copy.deepcopy(item[1]))
+            self.args = tuple([(item[0], copy.deepcopy(item[1]) if item[1].__class__.__name__ != 'Sheet' else copy.deepcopy(item[1].data))
                                for item in args])
         else:
-            self.args = args
+            self.args = [
+                (item[0], item[1] if item[1].__class__.__name__ != 'Sheet' else item[1].data)
+                for item in args]
         valid = ['Row', 'Column', 'Title', 'Series', 'DataFrame', 'Image']
         if len([item[1].__class__.__name__ for item in self.args
                 if item[1].__class__.__name__ not in valid]) > 0:
@@ -685,3 +687,14 @@ class Tabs:
         """
         _Workbook(workbook_path=workbook_path, exhibits=self,
                   default_formats=default_formats).to_excel()
+
+class Sheet:
+    def __init__(self, name, data, **kwargs):
+        self.name = name
+        self.kwargs = kwargs
+        self.data = data
+        # Allow for overrides
+        self.column_widths = self.data.column_widths
+
+    def to_excel(self, workbook_path, default_formats=None):
+        Tabs((self.name, self.data)).to_excel(workbook_path, default_formats)
