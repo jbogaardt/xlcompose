@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import copy
 import json
+from io import BytesIO
 
 
 class _Workbook:
@@ -28,12 +29,14 @@ class _Workbook:
             The target path and filename of the Excel document
         """
         self.exhibits = copy.deepcopy(self.exhibits)
+        if self.exhibits.__class__.__name__ == 'Sheet':
+            self.exhibits = Tabs(self.exhibits)
         if self.exhibits.__class__.__name__ != 'Tabs':
-            self.exhibits = Tabs(('sheet1', self.exhibits))
+            self.exhibits = Tabs(Sheet('sheet1', self.exhibits))
         for sheet in self.exhibits:
-            self._write(sheet[1], sheet[0])
-            sheet[1].kwargs.update(self.exhibits.kwargs)
-            self._set_worksheet_properties(sheet[1], sheet[0])
+            self._write(sheet.layout, sheet.name)
+            sheet.layout.kwargs.update(sheet.kwargs)
+            self._set_worksheet_properties(sheet.layout, sheet.name)
         self.writer.save()
         self.writer.close()
 
@@ -82,20 +85,59 @@ class _Workbook:
         for num, item in enumerate(widths):
             exhibit.worksheet.set_column(num, num, item)
         kwargs = exhibit.kwargs
+        exhibit.worksheet.fit_to_pages(*kwargs.get('fit_to_pages', (1,0)))
+        exhibit.worksheet.freeze_panes(*kwargs.get('freeze_panes', (0,0)))
+        if kwargs.get('set_page_view'):
+            exhibit.worksheet.set_page_view()
+        if kwargs.get('print_row_col_headers'):
+            exhibit.worksheet.print_row_col_headers()
+        if kwargs.get('hide_row_col_headers'):
+            exhibit.worksheet.hide_row_col_headers()
+        if kwargs.get('center_vertically'):
+            exhibit.worksheet.center_vertically()
+        if kwargs.get('center_horizontally'):
+            exhibit.worksheet.center_horizontally()
         if kwargs.get('set_header', None) is not None:
-            exhibit.worksheet.set_header(kwargs['set_header'])
+            if type(kwargs['set_header']) is list:
+                exhibit.worksheet.set_header('\n'.join(kwargs['set_header']))
+            else:
+                exhibit.worksheet.set_header(kwargs['set_header'])
         if kwargs.get('set_footer', None) is not None:
-            exhibit.worksheet.set_footer(kwargs['set_footer'])
+            if type(kwargs['set_footer']) is list:
+                exhibit.worksheet.set_footer('\n'.join(kwargs['set_footer']))
+            else:
+                exhibit.worksheet.set_footer(kwargs['set_footer'])
         if kwargs.get('repeat_rows', None) is not None:
             exhibit.worksheet.repeat_rows(*kwargs['repeat_rows'])
-        if kwargs.get('fit_to_pages', None) is not None:
-            exhibit.worksheet.fit_to_pages(*kwargs['fit_to_pages'])
+        if kwargs.get('repeat_columns', None) is not None:
+            exhibit.worksheet.repeat_rows(*kwargs['repeat_columns'])
+        if kwargs.get('set_margins', None) is not None:
+            exhibit.worksheet.set_margins(*kwargs['set_margins'])
         if kwargs.get('hide_gridlines', None) is not None:
-            exhibit.worksheet.hide_gridlines()
-        if sum(widths) > self.max_portrait_width:
+            exhibit.worksheet.hide_gridlines(kwargs['hide_gridlines'])
+        if kwargs.get('set_print_scale'):
+            exhibit.worksheet.set_print_scale(kwargs['set_print_scale'])
+        if kwargs.get('set_start_page'):
+            exhibit.worksheet.set_start_page(kwargs['set_start_page'])
+        if kwargs.get('set_h_pagebreaks'):
+            exhibit.worksheet.set_h_pagebreaks(kwargs['set_h_pagebreaks'])
+        if kwargs.get('set_v_pagebreaks'):
+            exhibit.worksheet.set_v_pagebreaks(kwargs['set_v_pagebreaks'])
+        if kwargs.get('print_across'):
+            exhibit.worksheet.print_across(kwargs['print_across'])
+        if kwargs.get('print_area'):
+            exhibit.worksheet.print_area(*kwargs['print_area'])
+        if kwargs.get('set_paper', None) is not None:
+            exhibit.worksheet.set_paper(kwargs['set_paper'])
+        if kwargs.get('set_landscape'):
             exhibit.worksheet.set_landscape()
-        else:
+        elif kwargs.get('set_landscape'):
             exhibit.worksheet.set_portrait()
+        else:
+            if sum(widths) > self.max_portrait_width:
+                exhibit.worksheet.set_landscape()
+            else:
+                exhibit.worksheet.set_portrait()
 
     def _write_title(self, exhibit):
         start_row = exhibit.start_row
@@ -299,6 +341,7 @@ class Series(Title):
 class Image:
     """ Image allows for the embedding of images into a spreadsheet
 
+
     Parameters
     ----------
     data : str
@@ -311,11 +354,22 @@ class Image:
         xlsxwriter options for modifying the image
     """
     def __init__(self, data, width=1, height=1, formats={}, *args, **kwargs):
+        if data.__class__.__name__=='AxesSubplot':
+            inch_to_row = 0.01431127
+            inch_to_col = 0.077469335
+            img_shape = data.get_figure().get_size_inches()
+            imgdata = BytesIO()
+            data.get_figure().savefig(imgdata, format="png")
+            data = '_.png'
+            formats.update({'image_data': imgdata})
         self.data = data
         self.width = width
         self.height = height
         self.formats = formats
         self.kwargs = kwargs
+        if kwargs.get('column_widths'):
+            self.column_widths = kwargs.get('column_widths')
+        self.column_widths = [8.09]*width
 
     def to_excel(self, workbook_path, default_formats=None):
         """ Outputs object to Excel.
@@ -466,7 +520,7 @@ class DataFrame:
                 self.data.columns,
                 [{'num_format': formats}] * len(self.data.columns))))
         elif type(formats) is dict and formats != {}:
-            if list(formats.keys())[0] not in self.data.columns:
+            if len(set(self.data.columns).intersection(formats.keys()))==0:
                 self.formats.update(dict(zip(
                     self.data.columns,
                     [formats] * len(self.data.columns))))
@@ -657,17 +711,11 @@ class Tabs:
     """
 
     def __init__(self, *args, **kwargs):
-        if len(args) != set([item[1] for item in args]):
-            self.args = tuple([(item[0], copy.deepcopy(item[1]) if item[1].__class__.__name__ != 'Sheet' else copy.deepcopy(item[1].data))
-                               for item in args])
-        else:
-            self.args = [
-                (item[0], item[1] if item[1].__class__.__name__ != 'Sheet' else item[1].data)
-                for item in args]
-        valid = ['Row', 'Column', 'Title', 'Series', 'DataFrame', 'Image']
-        if len([item[1].__class__.__name__ for item in self.args
-                if item[1].__class__.__name__ not in valid]) > 0:
-             raise TypeError('Valid objects include '  + ', '.join(valid))
+        self.args = [
+            Sheet(item[0], copy.deepcopy(item[1]))
+            if type(item) is tuple
+            else copy.deepcopy(item)
+            for item in args]
         self.kwargs = kwargs
 
     def __getitem__(self, key):
@@ -689,12 +737,29 @@ class Tabs:
                   default_formats=default_formats).to_excel()
 
 class Sheet:
-    def __init__(self, name, data, **kwargs):
+    """
+    Work with sheet properties.
+
+    Parameters
+    ----------
+    data:
+        An xlcompose object
+    """
+    def __init__(self, name, layout, **kwargs):
         self.name = name
         self.kwargs = kwargs
-        self.data = data
+        self.layout = layout
+        self.kwargs = kwargs
         # Allow for overrides
-        self.column_widths = self.data.column_widths
+        self.column_widths = self.layout.column_widths
 
     def to_excel(self, workbook_path, default_formats=None):
-        Tabs((self.name, self.data)).to_excel(workbook_path, default_formats)
+        """ Outputs object to Excel.
+
+        Parameters:
+        -----------
+        workbook_path : str
+            The target path and filename of the Excel document
+        """
+        _Workbook(workbook_path=workbook_path, exhibits=self,
+                  default_formats=default_formats).to_excel()

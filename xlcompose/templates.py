@@ -51,8 +51,11 @@ def make_xlc(template, **kwargs):
             return getattr(core, key)(*[make_xlc(element, **kwargs)
                                        for element in template[key]])
         if key in ['Sheet']:
+            sheet_kw = {k: v for k, v in template[key].items()
+                        if k not in ['name', 'layout']}
             return core.Sheet(template[key]['name'],
-                             make_xlc(template[key]['data'], **kwargs))
+                             make_xlc(template[key]['layout'], **kwargs),
+                             **sheet_kw)
         if key in ['DataFrame', 'Title', 'CSpacer', 'RSpacer', 'HSpacer',
                    'Series', 'Image']:
             for k, v in template[key].items():
