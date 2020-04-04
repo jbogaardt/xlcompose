@@ -10,7 +10,6 @@ from jinja2.ext import Extension
 from jinja2.nodes import Const
 
 
-
 class EvalExtension(Extension):
     """ enabled the { % eval %}{% endeval %} jinja functionality """
     tags = {'eval'}
@@ -32,7 +31,8 @@ class EvalExtension(Extension):
 def kwarg_parse(formula):
     names = pd.Series(list(set([node.id for node in ast.walk(ast.parse(formula))
                                 if isinstance(node, ast.Name)])))
-    names = names.iloc[names.str.len().sort_values(ascending=False).index].to_list()
+    names = names[~names.isin(['str', 'list', 'dict', 'int', 'float'])]
+    names = names.loc[names.str.len().sort_values(ascending=False).index].to_list()
     names = [(item, '__' + str(num) + '__',  'kwargs[\'' + item + '\']')
              for num, item in enumerate(names)]
     for item in names:
