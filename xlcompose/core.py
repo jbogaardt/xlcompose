@@ -86,7 +86,8 @@ class _Workbook:
             exhibit.worksheet.set_column(num, num, item)
         kwargs = exhibit.kwargs
         exhibit.worksheet.fit_to_pages(*kwargs.get('fit_to_pages', (1,0)))
-        exhibit.worksheet.freeze_panes(*kwargs.get('freeze_panes', (0,0)))
+        if kwargs.get('freeze_panes'):
+            exhibit.worksheet.freeze_panes(*kwargs['freeze_panes'])
         if kwargs.get('set_page_view'):
             exhibit.worksheet.set_page_view()
         if kwargs.get('print_row_col_headers'):
@@ -110,7 +111,7 @@ class _Workbook:
         if kwargs.get('repeat_rows', None) is not None:
             exhibit.worksheet.repeat_rows(*kwargs['repeat_rows'])
         if kwargs.get('repeat_columns', None) is not None:
-            exhibit.worksheet.repeat_rows(*kwargs['repeat_columns'])
+            exhibit.worksheet.repeat_columns(*kwargs['repeat_columns'])
         if kwargs.get('set_margins', None) is not None:
             exhibit.worksheet.set_margins(*kwargs['set_margins'])
         if kwargs.get('hide_gridlines', None) is not None:
@@ -131,7 +132,7 @@ class _Workbook:
             exhibit.worksheet.set_paper(kwargs['set_paper'])
         if kwargs.get('set_landscape'):
             exhibit.worksheet.set_landscape()
-        elif kwargs.get('set_landscape'):
+        elif kwargs.get('set_portrait'):
             exhibit.worksheet.set_portrait()
         else:
             if sum(widths) > self.max_portrait_width:
