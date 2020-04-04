@@ -19,7 +19,7 @@ With `xlcompose`, we take a compositional approach to spreadsheet design.
 With `Row`, `Column`, `Tabs`, and `Sheet` containers, we can conceptualize the
 placement of our data in an Excel spreadsheet.  Containers can be nested within
 other containers allowing for highly customized layout within Excel.  Did I lose you?
-Perhaps this conceptual image can layout data objects for Excel rendering.
+Perhaps this conceptual image of how a layout might look will help.
 ![alt](https://raw.githubusercontent.com/jbogaardt/xlcompose/master/docs/_static/images/layout.PNG)
 
 
