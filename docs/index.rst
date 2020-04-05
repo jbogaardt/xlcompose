@@ -36,6 +36,7 @@ Layout components include:
    :maxdepth: 2
 
    examples
+   templating
    modules
 
 

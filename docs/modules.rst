@@ -15,3 +15,6 @@ For reference on concepts repeated across the API, see glossary.
 
 .. automodule:: xlcompose.core
    :members:
+
+.. automodule:: xlcompose.templates
+   :members:
