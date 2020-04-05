@@ -5,7 +5,7 @@ import re
 import ast
 import os
 import xlcompose.core as core
-from jinja2 import nodes, Template, TemplateSyntaxError, FileSystemLoader, Environment
+from jinja2 import nodes, Template, TemplateSyntaxError, FileSystemLoader, Environment, BaseLoader
 from jinja2.ext import Extension
 from jinja2.nodes import Const
 
@@ -28,7 +28,7 @@ class EvalExtension(Extension):
         return '__eval__' + caller() + '__eval__'
 
 
-def kwarg_parse(formula):
+def _kwarg_parse(formula):
     names = pd.Series(list(set([node.id for node in ast.walk(ast.parse(formula))
                                 if isinstance(node, ast.Name)])))
     names = names[~names.isin(['str', 'list', 'dict', 'int', 'float'])]
@@ -41,20 +41,23 @@ def kwarg_parse(formula):
         formula = formula.replace(item[1],item[2])
     return formula
 
-def make_xlc(template, **kwargs):
+def _make_xlc(template, **kwargs):
         """ Recursively generate xlcompose object"""
         if type(template) is list:
-            tabs = [make_xlc(element, **kwargs) for element in template]
-            return core.Tabs(*[(item.name, item) for item in tabs])
+            tabs = [_make_xlc(element, **kwargs) for element in template]
+            try:
+                return core.Tabs(*[(item.name, item) for item in tabs])
+            except:
+                return core.Tabs(*[('Sheet1', item) for item in tabs])
         key = list(template.keys())[0]
         if key in ['Row', 'Column']:
-            return getattr(core, key)(*[make_xlc(element, **kwargs)
+            return getattr(core, key)(*[_make_xlc(element, **kwargs)
                                        for element in template[key]])
         if key in ['Sheet']:
             sheet_kw = {k: v for k, v in template[key].items()
                         if k not in ['name', 'layout']}
             return core.Sheet(template[key]['name'],
-                             make_xlc(template[key]['layout'], **kwargs),
+                             _make_xlc(template[key]['layout'], **kwargs),
                              **sheet_kw)
         if key in ['DataFrame', 'Title', 'CSpacer', 'RSpacer', 'HSpacer',
                    'Series', 'Image']:
@@ -62,18 +65,23 @@ def make_xlc(template, **kwargs):
                 if type(v) is str:
                     if v[:8] == '__eval__':
                         v_adj = v.replace('__eval__', '')
-                        template[key][k] =  eval(kwarg_parse(v_adj))
+                        template[key][k] =  eval(_kwarg_parse(v_adj))
             return getattr(core, key)(**template[key])
 
 def load(template, env, kwargs):
     if env:
         env.add_extension(EvalExtension)
     else:
-        path = os.path.dirname(os.path.abspath(template))
-        template = os.path.split(os.path.abspath(template))[-1]
-        env = Environment(loader=FileSystemLoader(path))
-        env.add_extension(EvalExtension)
-    template = env.get_template(template).render(kwargs)
+        try:
+            path = os.path.dirname(os.path.abspath(template))
+            template = os.path.split(os.path.abspath(template))[-1]
+            env = Environment(loader=FileSystemLoader(path))
+            env.add_extension(EvalExtension)
+            template = env.get_template(template).render(kwargs)
+        except:
+            env = Environment(loader=BaseLoader())
+            env.add_extension(EvalExtension)
+            template = env.from_string(template).render(kwargs)
     replace = [item.strip() for item in re.findall('[ :]{{.+}}', template)]
     for item in replace:
         template = template.replace(item, '\'' + item + '\'')
@@ -84,10 +92,10 @@ def load_yaml(template, env=None, **kwargs):
     """ Loads a YAML template specifying the structure of the XLCompose Object.
     """
     template = load(template, env, kwargs)
-    return make_xlc(yaml.load(template, Loader=yaml.SafeLoader), **kwargs)
+    return _make_xlc(yaml.load(template, Loader=yaml.SafeLoader), **kwargs)
 
 def load_json(template, env=None, **kwargs):
     """ Loads a JSON template specifying the structure of the XLCompose Object.
     """
     template = load(template, env, kwargs)
-    return make_xlc(json.loads(template), **kwargs)
+    return _make_xlc(json.loads(template), **kwargs)

@@ -20,7 +20,7 @@ The python object above can be expressed in a YAML notation and read into
 **Example:**
    >>> my_template = """
    ... - Column:
-   ...     Title:
+   ...     - Title:
    ...         data: ['This is a', 'sample title']
    ...         formats:
    ...             align: 'left'
@@ -41,7 +41,7 @@ using jinja, we can insert data into our template.
 **Example:**
    >>> my_template = """
    ... - Column:
-   ...     Title:
+   ...     - Title:
    ...         data: ['This is a', {{title}}]
    ...         formats:
    ...             align: 'left'
@@ -70,10 +70,10 @@ variable, jinja will grab the string representation of the object.
 **This will not work:**
    >>> my_template = """
    ... - Column:
-   ...     Title:
+   ...     - Title:
    ...         data: ['This is a', 'sample title']
-   ...     DataFrame:
-   ...       data: {{data}}
+   ...     - DataFrame:
+   ...         data: {{data}}
    ... """
    >>> xlc.load_yaml(my_template, data=data)
 
@@ -90,10 +90,10 @@ We don't want the string representation of our `DataFrame`, we want the actual
 **This is correct:**
    >>> my_template = """
    ... - Column:
-   ...     Title:
+   ...     - Title:
    ...         data: ['This is a', 'sample title']
-   ...     DataFrame:
-   ...       data: {% eval %}data{% endeval %}
+   ...     - DataFrame:
+   ...         data: {% eval %}data{% endeval %}
    ... """
    >>> xlc.load_yaml(my_template, data=data)
 
@@ -109,10 +109,10 @@ pass other variables as context to your `eval` directive.
 **Example:**
    >>> my_template = """
    ... - Column:
-   ...     Title:
+   ...     - Title:
    ...         data: ['This is a', 'sample title']
-   ...     DataFrame:
-   ...       data: {% eval %}data.groupby('{{group}}').sum(){% endeval %}
+   ...     - DataFrame:
+   ...         data: {% eval %}data.groupby('{{group}}').sum(){% endeval %}
    ... """
    >>> xlc.load_yaml(my_template, data=data, group='country')
 
@@ -129,14 +129,14 @@ revenue and expense by product.
 **Example:**
    >>> my_template = """
    ... - Column:
-   ...     Title:
+   ...     - Title:
    ...         data: ['Summary of Revenue and Expense', 'By Product and Country']
    ...     {% for country in data['country'].unique() %}
-   ...     Series:
+   ...     - Series:
    ...         data: 'Revenue and Expense for {{country}}'
    ...         formats:
    ...           bold: True
-   ...     DataFrame:
+   ...     - DataFrame:
    ...         data: {% eval %}data.groupby({{country}})[['Revenue', 'Expense']].sum(){% endeval %}
    ...         formats:
    ...           align: 'center'
