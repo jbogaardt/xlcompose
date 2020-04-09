@@ -80,11 +80,25 @@ def load(template, env, kwargs):
     return template
 
 
-def load_yaml(template, env=None, **kwargs):
+def load_yaml(template, env=None, str_only=False, **kwargs):
     """ Loads a YAML template specifying the structure of the XLCompose Object.
+
+    Paramters
+    ---------
+    template: str (path-like)
+        A string representing the path of a YAML file or a YAML string.
+    env: jinja2.Environment (optional)
+        The jinja2 environment to be used. If omitted, one will be created at
+        at the location of the template.
+    str_only: bool
+        Whether to load the string representation of the template only.  When set
+        to True (default), the `xlcompose` object will be constructed.
     """
     template = load(template, env, kwargs)
-    return make_xlc(yaml.load(template, Loader=yaml.SafeLoader), **kwargs)
+    if str_only:
+        return template
+    else:
+        return make_xlc(yaml.load(template, Loader=yaml.SafeLoader), **kwargs)
 
 def load_json(template, env=None, **kwargs):
     """ Loads a JSON template specifying the structure of the XLCompose Object.

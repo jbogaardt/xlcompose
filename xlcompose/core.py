@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import json
 from io import BytesIO
+import xlsxwriter
 
 
 class _Workbook:
@@ -521,14 +522,20 @@ class DataFrame:
                 self.data.columns,
                 [{'num_format': formats}] * len(self.data.columns))))
         elif type(formats) is dict and formats != {}:
+            available_formats = [
+                item[4:] for item in dir(xlsxwriter.format.Format)
+                if item[:3]=='set']
             if len(set(self.data.columns).intersection(formats.keys()))==0:
                 self.formats.update(dict(zip(
                     self.data.columns,
                     [formats] * len(self.data.columns))))
-            else:
+            elif len(set(available_formats).intersection(formats.keys()))==0:
                 formats = {k: v if type(v) is dict else {'num_format': v}
                            for k, v in formats.items()}
                 self.formats.update(formats)
+            else:
+                raise AttributeError(
+                    'DataFrame.formats must be a dict with keys set to column names or xlsxwriter formats.')
         else:
             pass
 
