@@ -8,13 +8,21 @@ import xlsxwriter
 
 class _Workbook:
     """
-    Excel Workbook level configurations.  This is not part of the end_user API
+    Excel Workbook level configurations.  This is not part of the end_user API.
+    This class  facilitates:
+    1. Crawling the xlcompose object on which `to_excel` is called
+    2. Writing the each nested object to an Excel file
+
     """
+    # Global settings.  These should be moved to a config file
     max_column_width = 30
+    max_row_height = 20
     max_portrait_width = 120
     footer = '&CPage &P of &N\n&A'
 
     def __init__(self, workbook_path, exhibits, default_formats):
+        """ Initialize the writer object
+        """
         self.formats = {}
         self.writer = pd.ExcelWriter(workbook_path)
         self.exhibits = exhibits
@@ -42,13 +50,30 @@ class _Workbook:
         self.writer.close()
 
     def _write(self, exhibit, sheet, start_row=0, start_col=0):
+        """
+        Parameters
+        ----------
+        exhibit :
+            An xlcompose object
+        sheet : str
+            The sheet name in Excel to write to
+        start_row : int
+            The starting row on which to write the exhibit
+        start_col : int
+            The starting column on which to write the exhibit
+        """
+        # Get xlcompose object for special handling
         klass = exhibit.__class__.__name__
         if getattr(exhibit, 'title', None) is not None:
+            ## Special handling of title.  It must live in a Column
+            #  if it doesn't already
             t = copy.deepcopy(exhibit.title)
             exhibit.title = None
             exhibit = Column(t, exhibit)
             self._write(exhibit, sheet, start_row, start_col)
         elif klass in ['Row', 'Column']:
+            ## Need to render each object in Row and Column args keeping in
+            #  mind the start_row and start_col of the container
             start_row = start_row
             start_col = start_col
             for item in exhibit.args:
@@ -58,14 +83,17 @@ class _Workbook:
                 if klass == 'Row':
                    start_col = start_col + item.width
         else:
+            # General rendering for Non-container objects
             exhibit.start_row = start_row
             exhibit.start_col = start_col
             exhibit.sheet_name = sheet
+            # Create sheet if it doesn't already exist
             try:
                 exhibit.worksheet = self.writer.sheets[exhibit.sheet_name]
             except:
                 pd.DataFrame().to_excel(self.writer, sheet_name=exhibit.sheet_name)
                 exhibit.worksheet = self.writer.sheets[exhibit.sheet_name]
+
             if klass in ['DataFrame', 'RSpacer', 'CSpacer']:
                 if exhibit.header:
                     self._write_header(exhibit)
@@ -74,17 +102,33 @@ class _Workbook:
                 self._register_formats(exhibit)
                 self._write_data(exhibit)
             if klass in ['Title', 'Series']:
-                self._write_title(exhibit)
+                self._write_series(exhibit)
             if klass == 'Image':
                 self._write_image(exhibit)
 
     def _set_worksheet_properties(self, exhibit, sheet):
-        ''' Format column widths, headers footers, etc.'''
+        """ Set worksheet level properties. Called once the entire sheet has
+        been rendered. These set worksheet level settings and in many cases is
+        a straight pass through to xlsxwriter.  Can we inspect the xlsxwriter
+        properties to dynamically support its functionality?
+
+        Parameters
+        ----------
+        exhibit :
+            An xlcompose object
+        sheet : str
+            The sheet name in Excel to write to
+        """
         exhibit.worksheet = self.writer.sheets[sheet]
         widths = [min(self.max_column_width, item)
                   for item in exhibit.column_widths]
+        heights = [min(self.max_row_height, item) if item is not None else item
+                   for item in exhibit.row_heights]
         for num, item in enumerate(widths):
             exhibit.worksheet.set_column(num, num, item)
+        for num, item in enumerate(heights):
+            if item is not None:
+                exhibit.worksheet.set_row(num, item)
         kwargs = exhibit.kwargs
         exhibit.worksheet.fit_to_pages(*kwargs.get('fit_to_pages', (1,0)))
         if kwargs.get('freeze_panes'):
@@ -141,7 +185,11 @@ class _Workbook:
             else:
                 exhibit.worksheet.set_portrait()
 
-    def _write_title(self, exhibit):
+    def _write_series(self, exhibit):
+        """ Writes a Series or Title object.  Special considerations are
+        that these objects can take a format list that applies to each element
+        of the Series.  These also merge cells to span their designated `width`.
+        """
         start_row = exhibit.start_row
         start_col = exhibit.start_col
         end_row = start_row + exhibit.height
@@ -166,6 +214,9 @@ class _Workbook:
                     title_format[r - start_row])
 
     def _write_image(self, exhibit):
+        """ Writes an image object and merges the cells behind it based on the
+        images designated `height` and `width`
+        """
         exhibit.worksheet.insert_image(
             exhibit.start_row, exhibit.start_col, exhibit.data,
             options=exhibit.formats)
@@ -253,8 +304,24 @@ class _Workbook:
                         width=exhibit.column_widths[c_idx + exhibit.index])
 
 
-class Title:
-    """ Make cool looking titles
+class XLCBase:
+    def to_excel(self, workbook_path, default_formats=None):
+        """ Outputs object to Excel.
+
+        Parameters:
+        -----------
+        workbook_path : str
+            The target path and filename of the Excel document
+        """
+        _Workbook(workbook_path=workbook_path, exhibits=self,
+                  default_formats=default_formats).to_excel()
+
+
+class Title(XLCBase):
+    """ Title objects are Series-like objects that has its own formatting style.
+
+    Difference between a Series and a Title is that a Title width will be
+    inferred from its container.
 
     Parameters
     ----------
@@ -263,9 +330,13 @@ class Title:
     formats : list of dicts
         Formats to be applied to the title
     width :
-        The width the title should span
+        The width the title should span.  If omitted, the title will take on
+        the width of its container.
+    column_widths :
+        The width of each column in the Title.
     """
-    def __init__(self, data, formats=[], width=None, column_widths=None, *args, **kwargs):
+    def __init__(self, data, formats=[], width=None,
+                 column_widths=None, row_heights=None, *args, **kwargs):
         if type(data) is str:
             data = [data]
         self.data = pd.DataFrame(data)
@@ -278,6 +349,8 @@ class Title:
         self.formats = {}
         if column_widths is not None and width is not None:
             self._column_widths = [column_widths]*self.width
+        if row_heights is not None:
+            self._row_heights = [row_heights]*len(self.data)
         self.kwargs = kwargs
 
     @property
@@ -289,6 +362,16 @@ class Title:
     @column_widths.setter
     def column_widths(self, value):
         self._column_widths = value
+
+    @property
+    def row_heights(self):
+        if hasattr(self, '_row_heights'):
+            return self._row_heights
+        return [None] * len(self.data)
+
+    @row_heights.setter
+    def row_heights(self, value):
+        self._row_heights = value
 
     def __len__(self):
         return len(self.data)
@@ -310,18 +393,11 @@ class Title:
                     original[num].update(overlay)
         return original
 
-    def to_excel(self, workbook_path, default_formats=None):
-        """ Outputs object to Excel.
-
-        Parameters:
-        -----------
-        workbook_path : str
-            The target path and filename of the Excel document
-        """
-        _Workbook(workbook_path=workbook_path, exhibits=self,
-                  default_formats=default_formats).to_excel()
 
 class Series(Title):
+    """ Series object - really how is this different from a Title other than
+    default formatting differences
+    """
     def __init__(self, data, formats=[], width=1, column_widths=1):
         data = pd.Series(data).to_frame()
         super().__init__(data, formats, width, column_widths)
@@ -340,7 +416,7 @@ class Series(Title):
                     str(self.data[0].dtype), base_formats['object'])
                 ] * len(self.data)
 
-class Image:
+class Image(XLCBase):
     """ Image allows for the embedding of images into a spreadsheet
 
 
@@ -373,31 +449,19 @@ class Image:
             self.column_widths = kwargs.get('column_widths')
         self.column_widths = [8.09]*width
 
-    def to_excel(self, workbook_path, default_formats=None):
-        """ Outputs object to Excel.
 
-        Parameters:
-        -----------
-        workbook_path : str
-            The target path and filename of the Excel document
-        """
-        _Workbook(workbook_path=workbook_path, exhibits=self,
-                  default_formats=default_formats).to_excel()
-
-
-class DataFrame:
+class DataFrame(XLCBase):
     """
     Excel-ready DataFrame
 
     Parameters:
     -----------
-    data : DataFrame or Triangle (2D)
-        The data to be places in the exhibit
+    data : DataFrame
+        The data to be placed in the exhibit
     formats : dict
-        The formats to be applied to the data.  Options include
-        'money', 'percent', 'decimal', 'date', 'int', and 'text'.  Each
-        format can be overriden at the class level by overriding its:
-        resepective format dict (e.g. DataFrame.money_format, ...)
+        The formats to be applied to the data columns.  Dictionary keys can be
+        either column names to do column specific formatting OR `xlsxwriter`
+        format names to use consistent formating across the entire `DataFrame`.
     header : bool or list (len of data.columns)
         False uses no headers, True uses headers from data. Alternatively,
         a list of strings will override headers.
@@ -407,13 +471,13 @@ class DataFrame:
         Set to True will insert column numbers into the exhibit.
     index : bool, default True
         Write row names (index).
-    index_formats : dict
-        The formats to be applied to the index, if any
     index_label : str or sequence, optional
         Column label for index column(s) if desired.
-    title : list
-        A list of strings up to length 4 (Title, subtitle1, subtitle2,
-        subtitle3) to be placed above the data in the exhibit.
+    index_formats : dict
+        The formats to be applied to the index, if any
+    column_widths : list
+        list of floats representing the column widths of each column within the
+        DataFrame.  If omitted, then widths are set by inspecting the data.
 
     """
 
@@ -421,17 +485,27 @@ class DataFrame:
     # Padding since bold characters are slightly larger than regular
     # and need a bit more width
     col_padding_multiplier = 1.1
+    index_formats = {
+        'num_format': '0;(0)', 'text_wrap': True,
+        'bold': True, 'valign': 'bottom', 'align': 'center'}
+    header_formats = {
+        'num_format': '0;(0)', 'text_wrap': True, 'bottom': 1,
+        'bold': True, 'valign': 'bottom', 'align': 'center'}
+    base_formats = {
+        'float64': {'num_format': '#,0.00', 'align': 'center'},
+        'float32': {'num_format': '#,0.00', 'align': 'center'},
+        'int64': {'num_format': '#,0', 'align': 'center'},
+        'int32': {'num_format': '#,0', 'align': 'center'},
+        '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
+        'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
+        'object': {'align': 'left'},
+    }
 
     def __init__(self, data, formats=None,
                  header=True, header_formats=None, col_nums=False,
                  index=True, index_label='', index_formats=None,
-                 title=None, column_widths=None, *args, **kwargs):
-        self.index_formats = {
-            'num_format': '0;(0)', 'text_wrap': True,
-            'bold': True, 'valign': 'bottom', 'align': 'center'}
-        self.header_formats = {
-            'num_format': '0;(0)', 'text_wrap': True, 'bottom': 1,
-            'bold': True, 'valign': 'bottom', 'align': 'center'}
+                 column_widths=None, row_heights=None, *args, **kwargs):
+
         if type(data) is not pd.DataFrame:
             data = data.to_frame()
         self.data = data
@@ -439,40 +513,22 @@ class DataFrame:
         self.index = index
         self.index_label = index_label
         self.col_nums = col_nums
-        self.format_validation(formats)
+        self._format_validation(formats)
         if column_widths is None:
-            self.column_widths = self.get_column_widths()
+            self.column_widths = self._get_column_widths()
         else:
             self.column_widths = column_widths
         self.height = data.shape[0] + self.col_nums + self.header
         self.width = data.shape[1] + self.index
-        if type(title) is str:
-            title = [title]
-        if title is None or title == []:
-            title = None
-        else:
-            self.height = self.height + len(title)
-        if type(title) is list:
-            title = Title(title)
-        self.title = title
         if header_formats is not None:
             self.header_formats.update(header_formats)
         if index_formats is not None:
             self.index_formats.update(index_formats)
+        if row_heights is not None:
+            self._row_heights = row_heights
         self.kwargs = kwargs
 
-    def to_excel(self, workbook_path, default_formats=None):
-        """ Outputs object to Excel.
-
-        Parameters:
-        -----------
-        workbook_path : str
-            The target path and filename of the Excel document
-        """
-        _Workbook(workbook_path=workbook_path, exhibits=self,
-                  default_formats=default_formats).to_excel()
-
-    def get_column_widths(self):
+    def _get_column_widths(self):
         """ Default column widths """
         if self.index:
             row_w = [max(self.data.index.astype(str).str.len())]
@@ -493,17 +549,23 @@ class DataFrame:
         return [max(item)* self.col_padding_multiplier
                 for item in zip(header_w, row_w)]
 
-    def format_validation(self, formats):
-        ''' Creates an Excel format compatible dictionary '''
-        base_formats = {
-            'float64': {'num_format': '#,0.00', 'align': 'center'},
-            'float32': {'num_format': '#,0.00', 'align': 'center'},
-            'int64': {'num_format': '#,0', 'align': 'center'},
-            'int32': {'num_format': '#,0', 'align': 'center'},
-            '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'object': {'align': 'left'},
-        }
+    @property
+    def row_heights(self):
+        if hasattr(self, '_row_heights'):
+            return self._row_heights
+        return [None]*(len(self.data) + (1 - (not self.header)) + self.col_nums)
+
+    @row_heights.setter
+    def row_heights(self, value):
+        self._row_heights = value
+
+
+    def _format_validation(self, formats):
+        ''' Creates an Excel format compatible dictionary.  Users can specify
+        formats in a variety of shorthand ways and this conforms them to an
+        xlsxwriter style.
+        '''
+
         if self.data.columns.name is not None:
             idx = self.data.index.to_frame().dtypes
             idx.index = [self.data.columns.name]
@@ -511,10 +573,8 @@ class DataFrame:
             idx = pd.Series()
         cols = self.data.dtypes.append(idx)
         self.formats = {
-            k: base_formats.get(v, base_formats['object'])
-            for k, v in dict(cols).items()
-        }
-
+            k: self.base_formats.get(v, self.base_formats['object'])
+            for k, v in dict(cols).items()}
         if type(formats) is list:
             self.formats.update(dict(zip(self.data.columns, formats)))
         elif type(formats) is str:
@@ -542,13 +602,14 @@ class DataFrame:
 
 class RSpacer(DataFrame):
     """ Convenience class to create a vertical spacer in a Row container"""
-    def __init__(self, width=1, column_widths=2.25, *args, **kwargs):
+    def __init__(self, width=1, column_widths=2.25, row_heights=None, *args, **kwargs):
         data = pd.DataFrame(dict(zip(list(range(width)), [' '] * width)),
                             index=[0])
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
         self.column_widths = [column_widths] * width
+        self.row_heights = [row_heights]
         self.kwargs = kwargs
 
 
@@ -558,21 +619,22 @@ class VSpacer(RSpacer):
 
 class CSpacer(DataFrame):
     """ Convenience class to create a horizontal spacer in a Column container"""
-    def __init__(self, height=1, column_widths=2.25, *args, **kwargs):
+    def __init__(self, height=1, column_widths=2.25, row_heights=None, *args, **kwargs):
         data = pd.DataFrame({' ': [' '] * height})
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
         self.column_widths = [column_widths]
+        self.row_heights = [row_heights] * height
         self.kwargs = kwargs
 
 
 class HSpacer(CSpacer):
     pass
 
-class _Container():
-    """ Base class for Row and Column
-    """
+
+class _Container(XLCBase):
+    """ Base class for Row and Column """
     def __init__(self, *args, **kwargs):
         self.args = tuple([copy.deepcopy(item) for item in args])
         self._title_len = 0
@@ -588,31 +650,16 @@ class _Container():
     def __len__(self):
         return len(self.args)
 
-    def to_excel(self, workbook_path, default_formats=None):
-        """ Outputs object to Excel.
-
-        Parameters:
-        -----------
-        workbook_path : str
-            The target path and filename of the Excel document
-        """
-        _Workbook(workbook_path=workbook_path, exhibits=self,
-                  default_formats=default_formats).to_excel()
-
 
 class Row(_Container):
     """
-    Lay out child components in a single horizontal row.
-    Children can be specified as positional arguments, as a single argument
-    that is a sequence.
+    A container object respresenting a horizontal layout of other `xlcompose`
+    objects.
 
     Parameters
     ----------
     args:
-        Children can be of the chainlader DataFrame, Row, and Column classes.
-    title: optional (str or list)
-        The title to be displayed across the top of the container.  Must be
-        specified using the keyword `title=`
+        Any xlcompose objects with the exception of `Sheet` and `Tabs`
 
     Attributes
     ----------
@@ -626,7 +673,7 @@ class Row(_Container):
         super().__init__(*args, **kwargs)
         for num, item in enumerate(self.args):
             if item.__class__.__name__ in ['Title']:
-                self.args = Column(item, Row(*self.args[num + 1:])),
+                self.args = Column(item, Row(*self.args[num + 1:]))
 
     @property
     def height(self):
@@ -636,6 +683,7 @@ class Row(_Container):
     def width(self):
         return sum([item.width for item in self.args
                     if item.__class__.__name__ not in ['Title']])
+
 
     @property
     def column_widths(self):
@@ -650,20 +698,34 @@ class Row(_Container):
     def column_widths(self, value):
         self._column_widths = value
 
+    @property
+    def row_heights(self):
+        if hasattr(self, '_row_heights'):
+            return self._row_heights
+        data = np.array(
+            [item.row_heights for item in self.args
+             if item.__class__.__name__ not in ['Title']])
+        lens = np.array([len(i) for i in data])
+        mask = np.arange(lens.max()) < lens[:,None]
+        out = np.zeros(mask.shape, dtype=data.dtype)
+        out[mask] = np.concatenate(data)
+        out[out==None]=0
+        return [item if item!=0 else None for item in np.max(out, axis=0)]
+
+    @row_heights.setter
+    def row_heights(self, value):
+        self._row_heights = value
+
 
 class Column(_Container):
     """
-    Lay out child components in a single vertical column.
-    Children can be specified as positional arguments, as a single argument
-    that is a sequence.
+    A container object respresenting a vertical layout of other `xlcompose`
+    objects.
 
     Parameters
     ----------
     args:
-        Children can be of the chainlader DataFrame, Row, and Column classes.
-    title: optional (str or list)
-        The title to be displayed across the top of the container.  Must be
-        specified using the keyword `title=`
+        Any xlcompose objects with the exception of `Sheet` and `Tabs`
 
     Attributes
     ----------
@@ -682,7 +744,6 @@ class Column(_Container):
     @property
     def height(self):
         return sum([item.height for item in self.args])
-
 
     @property
     def width(self):
@@ -706,16 +767,28 @@ class Column(_Container):
     def column_widths(self, value):
         self._column_widths = value
 
-class Tabs:
+    @property
+    def row_heights(self):
+        if hasattr(self, '_row_heights'):
+            return self._row_heights
+        row_heights = []
+        for item in [getattr(item, 'row_heights', []) for item in self.args]:
+            row_heights = row_heights + item
+        return row_heights
+
+    @row_heights.setter
+    def row_heights(self, value):
+        self._row_heights = row_heights
+
+class Tabs(XLCBase):
     """
-    Layout exhibits across worksheets.
+    A container object representing multiple worksheets.
 
     Parameters
     ----------
     args:
-        Children must be a tuple with a sheet name and any of chainlader
-        DataFrame, Row, Column, Image, or Sheet classes.  For example,
-        ('sheet1', cl.DataFrame(data))
+        A list of sheets or a tuple with a sheet name and any xlcompose object.
+        For example, `('sheet1', xlc.DataFrame(data))`
     """
 
     def __init__(self, *args, **kwargs):
@@ -732,42 +805,66 @@ class Tabs:
     def __len__(self):
         return len(self.args)
 
-    def to_excel(self, workbook_path, default_formats=None):
-        """ Outputs object to Excel.
 
-        Parameters:
-        -----------
-        workbook_path : str
-            The target path and filename of the Excel document
-
-        """
-        _Workbook(workbook_path=workbook_path, exhibits=self,
-                  default_formats=default_formats).to_excel()
-
-class Sheet:
+class Sheet(XLCBase):
     """
-    Work with sheet properties.
+    A container object representing an Excel worksheet.
 
     Parameters
     ----------
-    data:
+    name : str
+        The name of the worksheet
+    layout :
         An xlcompose object
+    fit_to_pages:
+        refer to `xlsxwriter` for `fit_to_pages` options
+    freeze_panes:
+        refer to `xlsxwriter` for `freeze_panes` options
+    set_page_view:
+        refer to `xlsxwriter` for `set_page_view` options
+    print_row_col_headers:
+        refer to `xlsxwriter` for `print_row_col_headers` options
+    hide_row_col_headers:
+        refer to `xlsxwriter` for `hide_row_col_headers` options
+    center_vertically:
+        refer to `xlsxwriter` for `center_vertically` options
+    center_horizontally:
+        refer to `xlsxwriter` for `center_horizontally` options
+    set_header:
+        refer to `xlsxwriter` for `set_header` options
+    set_footer:
+        refer to `xlsxwriter` for `set_footer` options
+    repeat_rows:
+        refer to `xlsxwriter` for `repeat_rows` options
+    repeat_columns:
+        refer to `xlsxwriter` for `repeat_columns` options
+    set_margins:
+        refer to `xlsxwriter` for `set_margins` options
+    hide_gridlines:
+        refer to `xlsxwriter` for `hide_gridlines` options
+    set_print_scale:
+        refer to `xlsxwriter` for `set_print_scale` options
+    set_start_page:
+        refer to `xlsxwriter` for `set_start_page` options
+    set_h_pagebreaks:
+        refer to `xlsxwriter` for `set_h_pagebreaks` options
+    set_v_pagebreaks:
+        refer to `xlsxwriter` for `set_v_pagebreaks` options
+    print_across:
+        refer to `xlsxwriter` for `print_across` options
+    print_area:
+        refer to `xlsxwriter` for `print_area` options
+    set_paper:
+        refer to `xlsxwriter` for `set_paper` options
+    set_landscape:
+        refer to `xlsxwriter` for `set_landscape` options
+    set_portrait:
+        refer to `xlsxwriter` for `set_portrait` options
     """
     def __init__(self, name, layout, **kwargs):
         self.name = name
         self.kwargs = kwargs
         self.layout = layout
         self.kwargs = kwargs
-        # Allow for overrides
         self.column_widths = self.layout.column_widths
-
-    def to_excel(self, workbook_path, default_formats=None):
-        """ Outputs object to Excel.
-
-        Parameters:
-        -----------
-        workbook_path : str
-            The target path and filename of the Excel document
-        """
-        _Workbook(workbook_path=workbook_path, exhibits=self,
-                  default_formats=default_formats).to_excel()
+        self.row_heights = self.layout.row_heights
