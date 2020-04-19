@@ -321,7 +321,7 @@ class XLCBase:
         display: flex;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 2px 5px 0 rgba(0, 0, 0, 0.19);
     """
-    px_per_row = 10
+    px_per_row = 15
 
     def to_excel(self, workbook_path, default_formats=None):
         """ Outputs object to Excel.
