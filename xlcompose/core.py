@@ -337,6 +337,13 @@ class XLCBase:
     def _repr_html_(self):
         return self._get_html()
 
+    def _get_html(self, my_height=0, my_width=100):
+        width = 'width:' + str(my_width) + '%;' if my_width < 100 else 'width: auto;'
+        return '<div class="card" style="' + self.container + 'height:' + \
+                str(self.height*self.px_per_row) + 'px;' + width + \
+                '"><div style="' + self.label + '">' + self.__class__.__name__ + \
+                '</div></div>\n'
+
 
 class Title(XLCBase):
     """ Title objects are Series-like objects that has its own formatting style.
@@ -425,10 +432,6 @@ class Title(XLCBase):
                     original[num].update(overlay)
         return original
 
-    def _get_html(self, my_height=0, my_width=100):
-        width = f'width:{my_width}%;' if my_width < 100 else 'width: auto;'
-        return f'<div class="card" style="{self.container}height:{self.height*self.px_per_row}px;{width}"><div style="{self.label}">Title</div></div>\n'
-
 
 class Series(Title):
     """ Series object - really how is this different from a Title other than
@@ -463,9 +466,6 @@ class Series(Title):
                     str(self.data[0].dtype), base_formats['object'])
                 ] * len(self.data)
 
-    def _get_html(self, my_height=0, my_width=100):
-        width = f'width:{my_width}%;' if my_width < 100 else 'width: auto;'
-        return f'<div style="{self.container}height:{self.height*self.px_per_row}px;{width}"><div style="{self.label}">Series</div></div>\n'
 
 class Image(XLCBase):
     """ Image allows for the embedding of images into a spreadsheet
@@ -509,10 +509,6 @@ class Image(XLCBase):
         if kwargs.get('column_widths'):
             self.column_widths = kwargs.get('column_widths')
         self.column_widths = [8.09]*width
-
-    def _get_html(self, my_height=0, my_width=100):
-        width = f'width:{my_width}%;' if my_width < 100 else 'width: auto;'
-        return f'<div style="{self.container}height:{self.height*self.px_per_row}px;{width}"><div style="{self.label}">DataFrame</div></div>\n'
 
 
 class DataFrame(XLCBase):
@@ -673,10 +669,6 @@ class DataFrame(XLCBase):
         else:
             pass
 
-    def _get_html(self, my_height=0, my_width=100):
-        width = f'width:{my_width}%;' if my_width < 100 else 'width: auto;'
-        return f'<div style="{self.container}height:{self.height*self.px_per_row}px;{width}"><div style="{self.label}">DataFrame</div></div>\n'
-
 
 class RSpacer(DataFrame):
     """ Convenience class to create a vertical spacer in a Row container"""
@@ -702,7 +694,10 @@ class RSpacer(DataFrame):
         self.kwargs = kwargs
 
     def _get_html(self, my_height=0, my_width=100):
-        return f'<div style="{self.container}height:{my_height*self.px_per_row}px;width:{my_width}%;"><div style="{self.label}">RSpacer</div></div>\n'
+        return '<div style="'+ self.container + 'height:' + \
+                str(my_height*self.px_per_row) + 'px;width:'+ \
+                str(my_width)+'%;"><div style="' + self.label + \
+                '">RSpacer</div></div>\n'
 
 
 class VSpacer(RSpacer):
@@ -732,7 +727,8 @@ class CSpacer(DataFrame):
         self.kwargs = kwargs
 
     def _get_html(self, my_height=0, my_width=100):
-        return f'<div style="{self.container}width: auto;"><div style="{self.label}">CSpacer</div></div>\n'
+        return '<div style="' + self.container + 'width: auto;"><div style="' + \
+                self.label + '">CSpacer</div></div>\n'
 
 
 class HSpacer(CSpacer):
@@ -844,8 +840,9 @@ class Row(_Container):
             else:
                 contents.append(self.args[num]._get_html(heights[num], widths[num]))
         contents = ''.join(contents)
-        width = f'width:{my_width}%;' if my_width < 100 else 'width: auto;'
-        return f'<div style="{self.container}{width}"><div style="{self.label}">Row</div>{contents}</div>\n'
+        width = 'width:' + str(my_width) + '%;' if my_width < 100 else 'width: auto;'
+        return '<div style="' + self.container + width + '"><div style="' + \
+                self.label + '">Row</div>' + contents + '</div>\n'
 
 
 class Column(_Container):
@@ -919,8 +916,10 @@ class Column(_Container):
         for num in range(len(self.args)):
             contents.append(self.args[num]._get_html(heights[num], widths[num]))
         contents = ''.join(contents)
-        width = f'width:{my_width}%;' if my_width < 100 else 'width: auto;'
-        return f'<div style="{self.container};flex-direction: column;{width};"><div style="{self.label}">Column</div>{contents}</div>\n'
+        width = 'width:' + str(my_width) + '%;' if my_width < 100 else 'width: auto;'
+        return '<div style="' + self.container + ';flex-direction: column;' + \
+                width + ';"><div style="' + self.label + '">Column</div>' + \
+                contents + '</div>\n'
 
 class Tabs(XLCBase):
     """

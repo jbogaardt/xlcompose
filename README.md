@@ -2,7 +2,7 @@
 
 # xlcompose
 A declarative API for composing spreadsheets from python that is built on
-`xlsxwriter`, `pandas` and inspired by `bokeh` and `flask`.
+`xlsxwriter`, `pandas` and inspired web design.
 
 ### Why use xlcompose?
 `xlcompose` provides a sweet spot between pandas `to_excel` and the `xlsxwriter`
@@ -15,11 +15,22 @@ but it's imperative style can often lead to very verbose code.
 With `xlcompose`, we take a compositional approach to spreadsheet design.
 
 ### Features
-#### A rich set of container classes to manage layout of data
+#### Data components to render the your data in Excel
+`DataFrame` and `Series` components wrap the objects of the same name from the
+beloved `pandas` library.  A convenience class called `Title` that behaves much
+like a `Series` with title-style formatting. Finally, `Image` components which
+can take in image files or work directly with matplotlib objects.  This includes wrapping pandas plots:
+```python
+import xlcompose as xlc
+xlc.DataFrame(df)
+xlc.Image(df.plot())
+```
+
+#### Container components to manage layout of your Excel file
 With `Row`, `Column`, `Tabs`, and `Sheet` containers, we can layout our data in
 an Excel spreadsheet.  Containers can be nested within other containers allowing
-for highly customized layout within Excel.  These layouts are can be reviewed in
-a Jupyter notebook ahead of rendering in Excel.
+for highly customized layout within Excel.  These layouts can be reviewed in
+a Jupyter notebook prior to rendering in Excel.
 ![alt](https://raw.githubusercontent.com/jbogaardt/xlcompose/master/docs/_static/images/layout.PNG)
 
 
