@@ -1,0 +1,2 @@
+include xlcompose/settings.yaml
+include xlcompose/styles.css

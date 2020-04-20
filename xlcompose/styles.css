@@ -1,0 +1,84 @@
+[class*="xlclabel-"] {
+  border-radius: 2px 0 2px 0;
+  font-size: 12px;
+  font-weight: bold;
+  left: -1px;
+  top: -1px;
+  padding: 3px 7px;
+  position: absolute;
+}
+
+[class*="xlccontainer-"] {
+  border-radius: 2px;
+  margin: 4px 2px;
+  position: relative;
+  display: flex;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 2px 5px 0 rgba(0, 0, 0, 0.19);
+}
+
+.xlccontainer-Title {
+  border: 1px solid #40b3da;
+  padding: 25px 2px 0px;
+  min-width:51px;
+}
+
+.xlclabel-Title {
+  background-color: #40b3da;
+  color: #FFFFFF;
+}
+
+.xlccontainer-Series {
+  border: 1px solid #99cfdf;
+  padding: 3px 0px 24px;
+  min-width:51px;
+}
+
+.xlclabel-Series {
+  background-color: #99cfdf;
+  color: #FFFFFF;
+}
+
+.xlccontainer-Image {
+  border: 1px solid #79004d;
+  padding: 3px 0px 24px;
+  min-width:79px;
+}
+
+.xlclabel-Image {
+  background-color: #79004d;
+  color: #FFFFFF;
+}
+
+.xlccontainer-DataFrame {
+  border: 1px solid #b9baa8;
+  padding: 3px 0px 24px;
+  min-width:79px;
+}
+
+.xlclabel-DataFrame {
+  background-color: #b9baa8;
+  color: #FFFFFF;
+}
+
+.xlccontainer-Spacer {
+  border: 1px solid #DDDDDD;
+  padding: 3px 0px 24px;
+  min-width:59px;
+}
+
+.xlclabel-Spacer {
+  background-color: #F5F5F5;
+  border: 1px solid #DDDDDD;
+  color: #9DA0A4;
+}
+
+.xlccontainer-Container {
+  border: 1px solid #DDDDDD;
+  padding: 25px 2px 0px;
+}
+
+.xlclabel-Container {
+  background-color: #F5F5F5;
+  border: 1px solid #DDDDDD;
+  color: #9DA0A4;
+}

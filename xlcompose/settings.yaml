@@ -1,0 +1,35 @@
+max_column_width: 30 # How wide should we allow columns to go
+max_row_height: 20 # How tall should we allow rows to go
+max_portrait_width: 120 # Switch to landscape print when width exeeds this
+min_numeric_col_width: 12 # Minimum width of numeric columns
+col_padding_multiplier: 1.1 # How much padding per character to put on columns for width sizing
+
+base_formats:
+  float64: {'num_format': '#,0.00', 'align': 'center'}
+  float32: {'num_format': '#,0.00', 'align': 'center'}
+  int64: {'num_format': '#,0', 'align': 'center'}
+  int32: {'num_format': '#,0', 'align': 'center'}
+  <M8[ns]: {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'}
+  datetime64[ns]: {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'}
+  object: {'align': 'left'}
+
+index_formats:
+  num_format: '0;(0)'
+  text_wrap: True
+  bold: True
+  valign: 'bottom'
+  align: 'center'
+
+header_formats:
+  num_format: '0;(0)'
+  text_wrap: True
+  bottom: 1
+  bold: True
+  valign: 'bottom'
+  align: 'center'
+
+title_formats:
+  - {'font_size': 20, 'align': 'center'}
+  - {'font_size': 16, 'align': 'center'}
+  - {'font_size': 16, 'align': 'center'}
+  - {'font_size': 13, 'align': 'center'}

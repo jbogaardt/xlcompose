@@ -2,8 +2,14 @@ import pandas as pd
 import numpy as np
 import copy
 import json
+import os
 from io import BytesIO
 import xlsxwriter
+import yaml
+
+settings = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.yaml')
+with open(settings, 'r') as f:
+    settings = yaml.load(f.read(),Loader=yaml.SafeLoader)
 
 
 class _Workbook:
@@ -14,11 +20,6 @@ class _Workbook:
     2. Writing the each nested object to an Excel file
 
     """
-    # Global settings.  These should be moved to a config file
-    max_column_width = 30
-    max_row_height = 20
-    max_portrait_width = 120
-    footer = '&CPage &P of &N\n&A'
 
     def __init__(self, workbook_path, exhibits, default_formats):
         """ Initialize the writer object
@@ -120,9 +121,9 @@ class _Workbook:
             The sheet name in Excel to write to
         """
         exhibit.worksheet = self.writer.sheets[sheet]
-        widths = [min(self.max_column_width, item)
+        widths = [min(settings['max_column_width'], item)
                   for item in exhibit.column_widths]
-        heights = [min(self.max_row_height, item) if item is not None else item
+        heights = [min(settings['max_row_height'], item) if item is not None else item
                    for item in exhibit.row_heights]
         for num, item in enumerate(widths):
             exhibit.worksheet.set_column(num, num, item)
@@ -131,18 +132,24 @@ class _Workbook:
                 exhibit.worksheet.set_row(num, item)
         kwargs = exhibit.kwargs
         exhibit.worksheet.fit_to_pages(*kwargs.get('fit_to_pages', (1,0)))
-        if kwargs.get('freeze_panes'):
-            exhibit.worksheet.freeze_panes(*kwargs['freeze_panes'])
-        if kwargs.get('set_page_view'):
-            exhibit.worksheet.set_page_view()
-        if kwargs.get('print_row_col_headers'):
-            exhibit.worksheet.print_row_col_headers()
-        if kwargs.get('hide_row_col_headers'):
-            exhibit.worksheet.hide_row_col_headers()
-        if kwargs.get('center_vertically'):
-            exhibit.worksheet.center_vertically()
-        if kwargs.get('center_horizontally'):
-            exhibit.worksheet.center_horizontally()
+        bool_funcs = [
+            'set_page_view', 'print_row_col_headers', 'hide_row_col_headers',
+            'center_vertically', 'center_horizontally']
+        for func in bool_funcs:
+            if kwargs.get(func):
+                getattr(exhibit.worksheet, func)()
+        passthru_funcs = [
+            'hide_gridlines', 'set_print_scale', 'set_start_page', 'set_paper'
+            'set_h_pagebreaks', 'set_v_pagebreaks', 'print_across']
+        for func in passthru_funcs:
+            if kwargs.get(func):
+                getattr(exhibit.worksheet, func)(kwargs[func])
+        starg_funcs = [
+            'freeze_panes', 'repeat_rows', 'repeat_columns', 'set_margins',
+            'print_area']
+        for func in starg_funcs:
+            if kwargs.get(func):
+                getattr(exhibit.worksheet, func)(*kwargs[func])
         if kwargs.get('set_header', None) is not None:
             if type(kwargs['set_header']) is list:
                 exhibit.worksheet.set_header('\n'.join(kwargs['set_header']))
@@ -153,34 +160,12 @@ class _Workbook:
                 exhibit.worksheet.set_footer('\n'.join(kwargs['set_footer']))
             else:
                 exhibit.worksheet.set_footer(kwargs['set_footer'])
-        if kwargs.get('repeat_rows', None) is not None:
-            exhibit.worksheet.repeat_rows(*kwargs['repeat_rows'])
-        if kwargs.get('repeat_columns', None) is not None:
-            exhibit.worksheet.repeat_columns(*kwargs['repeat_columns'])
-        if kwargs.get('set_margins', None) is not None:
-            exhibit.worksheet.set_margins(*kwargs['set_margins'])
-        if kwargs.get('hide_gridlines', None) is not None:
-            exhibit.worksheet.hide_gridlines(kwargs['hide_gridlines'])
-        if kwargs.get('set_print_scale'):
-            exhibit.worksheet.set_print_scale(kwargs['set_print_scale'])
-        if kwargs.get('set_start_page'):
-            exhibit.worksheet.set_start_page(kwargs['set_start_page'])
-        if kwargs.get('set_h_pagebreaks'):
-            exhibit.worksheet.set_h_pagebreaks(kwargs['set_h_pagebreaks'])
-        if kwargs.get('set_v_pagebreaks'):
-            exhibit.worksheet.set_v_pagebreaks(kwargs['set_v_pagebreaks'])
-        if kwargs.get('print_across'):
-            exhibit.worksheet.print_across(kwargs['print_across'])
-        if kwargs.get('print_area'):
-            exhibit.worksheet.print_area(*kwargs['print_area'])
-        if kwargs.get('set_paper', None) is not None:
-            exhibit.worksheet.set_paper(kwargs['set_paper'])
         if kwargs.get('set_landscape'):
             exhibit.worksheet.set_landscape()
         elif kwargs.get('set_portrait'):
             exhibit.worksheet.set_portrait()
         else:
-            if sum(widths) > self.max_portrait_width:
+            if sum(widths) > settings['max_portrait_width']:
                 exhibit.worksheet.set_landscape()
             else:
                 exhibit.worksheet.set_portrait()
@@ -304,24 +289,10 @@ class _Workbook:
                         width=exhibit.column_widths[c_idx + exhibit.index])
 
 
-class XLCBase:
-    label = """
-        border-radius: 2px 0 2px 0;
-        font-size: 12px;
-        font-weight: bold;
-        left: -1px;
-        top: -1px;
-        padding: 3px 7px;
-        position: absolute;
-    """
-    container = """
-        border-radius: 2px;
-        margin: 4px 2px;
-        position: relative;
-        display: flex;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 2px 5px 0 rgba(0, 0, 0, 0.19);
-    """
+class _XLCBase:
     px_per_row = 15
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'styles.css'), 'r') as f:
+        styles = '<style>' + f.read() + '</style>'
 
     def to_excel(self, workbook_path, default_formats=None):
         """ Outputs object to Excel.
@@ -335,44 +306,43 @@ class XLCBase:
                   default_formats=default_formats).to_excel()
 
     def _repr_html_(self):
-        return self._get_html()
+        return self.styles + self._get_html()
+
 
     def _get_html(self, my_height=0, my_width=100):
         width = 'width:' + str(my_width) + '%;' if my_width < 100 else 'width: auto;'
-        return '<div class="card" style="' + self.container + 'height:' + \
-                str(self.height*self.px_per_row) + 'px;' + width + \
-                '"><div style="' + self.label + '">' + self.__class__.__name__ + \
+        name = self.__class__.__name__
+        return '<div class="xlccontainer-' + name + \
+                '" style="height:' + str(self.height*self.px_per_row) + 'px;' + \
+                width + '"><div class="xlclabel-' + \
+                name + '">' + name + \
                 '</div></div>\n'
 
 
-class Title(XLCBase):
+class Title(_XLCBase):
     """ Title objects are Series-like objects that has its own formatting style.
 
-    Difference between a Series and a Title is that a Title width will be
-    inferred from its container.
+    Difference between a Series and a Title is that a Title `width` will be
+    inferred from its container.  Additionally, Title objects have a different
+    default format.
 
     Parameters
     ----------
     data : str or list of str
         Title and subtitle texts
-    formats : list of dicts
-        Formats to be applied to the title
+    formats : list
+        The formats to be applied to the Title. Each element in the Title
+        will be assigned a format from this list with the corresponding index.
     width :
         The width the title should span.  If omitted, the title will take on
         the width of its container.
-    column_widths :
-        The width of each column in the Title.
+    column_widths : list
+        list of floats representing the column widths of each column within the
+        DataFrame.  If omitted, then widths are set by inspecting the data.
+    row_heights : list
+        list of floats representing the row heights of each row within the
+        Series.  If omitted, then heights are set by inspecting the data.
     """
-    container = """
-        border: 1px solid #40b3da;
-        padding: 25px 2px 0px;
-        min-width:51px;
-    """ + XLCBase.container
-    label = """
-        background-color: #40b3da;
-        color: #FFFFFF;
-    """ + XLCBase.label
-    #padding: 3px 0px 24px
 
     def __init__(self, data, formats=[], width=None,
                  column_widths=None, row_heights=None, *args, **kwargs):
@@ -416,10 +386,8 @@ class Title(XLCBase):
         return len(self.data)
 
     def _default_format(self):
-        return [{'font_size': 20, 'align': 'center'},
-                {'font_size': 16, 'align': 'center'},
-                {'font_size': 16, 'align': 'center'}] + \
-               [{'font_size': 13, 'align': 'center'}] * (len(self.data)-3)
+        title_formats = copy.deepcopy(settings['title_formats'])
+        return title_formats[:3] + title_formats[-1:] * (len(self.data)-3)
 
     def _set_format(self, overlay):
         original = self._default_format()
@@ -434,47 +402,54 @@ class Title(XLCBase):
 
 
 class Series(Title):
-    """ Series object - really how is this different from a Title other than
-    default formatting differences
+    """ Excel-ready Series object. This component does not render the index or
+    series name.  To include those, see the `DataFrame` component.
+
+    Parameters
+    ----------
+    data : list or Series
+        The data to be placed into the series
+    formats : list
+        The formats to be applied to the Series. Each element in the Series
+        will be assigned a format from this list with the corresponding index.
+    widths: int
+        The number of columns the Series should span. For values higher than 1,
+        the columns spanned will be merged.
+    column_widths : list
+        list of floats representing the column widths of each column within the
+        DataFrame.  If omitted, then widths are set by inspecting the data.
+    row_heights : list
+        list of floats representing the row heights of each row within the
+        Series.  If omitted, then heights are set by inspecting the data.
     """
 
-    container = """
-        border: 1px solid #99cfdf;
-        padding: 3px 0px 24px;
-        min-width:51px;
-    """ + XLCBase.container
-    label = """
-        background-color: #99cfdf;
-        color: #FFFFFF;
-    """ + XLCBase.label
-
-    def __init__(self, data, formats=[], width=1, column_widths=1):
-        data = pd.Series(data).to_frame()
-        super().__init__(data, formats, width, column_widths)
+    def __init__(self, data, formats=None, width=1, column_widths=1,
+                 row_heights=None, *args, **kwargs):
+        formats = formats or []
+        if type(data) == pd.Series:
+            data = data.to_frame()
+        else:
+            data = pd.Series(data).to_frame()
+        super().__init__(data, formats, width, column_widths, row_heights,
+                         *args, **kwargs)
 
     def _default_format(self):
-        base_formats = {
-            'float64': {'num_format': '#,0.00', 'align': 'center'},
-            'float32': {'num_format': '#,0.00', 'align': 'center'},
-            'int64': {'num_format': '#,0', 'align': 'center'},
-            'int32': {'num_format': '#,0', 'align': 'center'},
-            '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-            'object': {'align': 'left'},
-        }
+        base_formats = copy.deepcopy(settings['base_formats'])
         return [base_formats.get(
                     str(self.data[0].dtype), base_formats['object'])
                 ] * len(self.data)
 
 
-class Image(XLCBase):
+
+class Image(_XLCBase):
     """ Image allows for the embedding of images into a spreadsheet
 
 
     Parameters
     ----------
     data : str
-        path to the image file, e.g. sample.png or ./sample.jpg
+        path to the image file, e.g. sample.png or ./sample.jpg or a matplotlib
+        `AxesSubplot`
     width : int
         the number of columns consumed by the image
     height : int
@@ -482,15 +457,6 @@ class Image(XLCBase):
     formats : dict
         xlsxwriter options for modifying the image
     """
-    container = """
-        border: 1px solid #79004d;
-        padding: 3px 0px 24px;
-        min-width:79px;
-    """ + XLCBase.container
-    label = """
-        background-color: #79004d;
-        color: #FFFFFF;
-    """ + XLCBase.label
 
     def __init__(self, data, width=1, height=1, formats={}, *args, **kwargs):
         if data.__class__.__name__=='AxesSubplot':
@@ -511,14 +477,15 @@ class Image(XLCBase):
         self.column_widths = [8.09]*width
 
 
-class DataFrame(XLCBase):
+class DataFrame(_XLCBase):
     """
-    Excel-ready DataFrame
+    An Excel-ready DataFrame.
 
     Parameters:
     -----------
     data : DataFrame
-        The data to be placed in the exhibit
+        The data to be placed in the exhibit. Must be a pandas DataFrame or an
+        object with the `to_frame()` method.
     formats : dict
         The formats to be applied to the data columns.  Dictionary keys can be
         either column names to do column specific formatting OR `xlsxwriter`
@@ -539,37 +506,14 @@ class DataFrame(XLCBase):
     column_widths : list
         list of floats representing the column widths of each column within the
         DataFrame.  If omitted, then widths are set by inspecting the data.
-
+    row_heights : list
+        list of floats representing the row heights of each row within the
+        DataFrame.  If omitted, then heights are set by inspecting the data.
     """
 
-    min_numeric_col_width = 12
-    # Padding since bold characters are slightly larger than regular
-    # and need a bit more width
-    col_padding_multiplier = 1.1
-    index_formats = {
-        'num_format': '0;(0)', 'text_wrap': True,
-        'bold': True, 'valign': 'bottom', 'align': 'center'}
-    header_formats = {
-        'num_format': '0;(0)', 'text_wrap': True, 'bottom': 1,
-        'bold': True, 'valign': 'bottom', 'align': 'center'}
-    base_formats = {
-        'float64': {'num_format': '#,0.00', 'align': 'center'},
-        'float32': {'num_format': '#,0.00', 'align': 'center'},
-        'int64': {'num_format': '#,0', 'align': 'center'},
-        'int32': {'num_format': '#,0', 'align': 'center'},
-        '<M8[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-        'datetime64[ns]': {'num_format': 'yyyy-mm-dd hh:mm', 'align': 'center'},
-        'object': {'align': 'left'},
-    }
-    container = """
-        border: 1px solid #b9baa8;
-        padding: 3px 0px 24px;
-        min-width:79px;
-    """ + XLCBase.container
-    label = """
-        background-color: #b9baa8;
-        color: #FFFFFF;
-    """ + XLCBase.label
+    index_formats = copy.deepcopy(settings['index_formats'])
+    header_formats = copy.deepcopy(settings['header_formats'])
+    base_formats = copy.deepcopy(settings['base_formats'])
 
     def __init__(self, data, formats=None,
                  header=True, header_formats=None, col_nums=False,
@@ -613,10 +557,10 @@ class DataFrame(XLCBase):
                     for item in headers]
         numeric_cols = self.data.select_dtypes('number').columns
         row_w = row_w + \
-                [(self.min_numeric_col_width if item in numeric_cols
+                [(settings['min_numeric_col_width'] if item in numeric_cols
                  else max(self.data[item].astype(str).str.len()))
                  for item in headers]
-        return [max(item)* self.col_padding_multiplier
+        return [max(item)* settings['col_padding_multiplier']
                 for item in zip(header_w, row_w)]
 
     @property
@@ -671,82 +615,58 @@ class DataFrame(XLCBase):
 
 
 class RSpacer(DataFrame):
-    """ Convenience class to create a vertical spacer in a Row container"""
-    container = """
-        border: 1px solid #DDDDDD;
-        padding: 3px 0px 24px;
-        min-width:59px;
-    """ + XLCBase.container
-    label = """
-        background-color: #F5F5F5;
-        border: 1px solid #DDDDDD;
-        color: #9DA0A4;
-    """ + XLCBase.label
+    """ A blank vertical space in a Row container.
 
-    def __init__(self, width=1, column_widths=2.25, row_heights=None, *args, **kwargs):
+    Parameters
+    ----------
+    width: int
+        Width (in number of columns) of the RSpacer
+    column_widths: float
+        The width to apply to each column of the RSpacer
+    """
+
+    def __init__(self, width=1, column_widths=2.25, *args, **kwargs):
         data = pd.DataFrame(dict(zip(list(range(width)), [' '] * width)),
                             index=[0])
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
         self.column_widths = [column_widths] * width
-        self.row_heights = [row_heights]
+        self.row_heights = [None]
         self.kwargs = kwargs
 
     def _get_html(self, my_height=0, my_width=100):
-        return '<div style="'+ self.container + 'height:' + \
+        return '<div class="xlccontainer-Spacer" style="height:' + \
                 str(my_height*self.px_per_row) + 'px;width:'+ \
-                str(my_width)+'%;"><div style="' + self.label + \
-                '">RSpacer</div></div>\n'
-
-
-class VSpacer(RSpacer):
-    pass
+                str(my_width)+'%;"><div class="xlclabel-Spacer">RSpacer</div></div>\n'
 
 
 class CSpacer(DataFrame):
-    """ Convenience class to create a horizontal spacer in a Column container"""
-    container = """
-        border: 1px solid #DDDDDD;
-        padding: 3px 0px 24px;
-        min-width:59px;
-    """ + XLCBase.container
-    label = """
-        background-color: #F5F5F5;
-        border: 1px solid #DDDDDD;
-        color: #9DA0A4;
-    """ + XLCBase.label
+    """ A blank horizontal space in a Column container.
 
-    def __init__(self, height=1, column_widths=2.25, row_heights=None, *args, **kwargs):
+    Parameters
+    ----------
+    height: int
+        Height (in number of rows) of the CSpacer
+    row_heights: float
+        The height to apply to each row of the CSpacer
+    """
+
+    def __init__(self, height=1, row_heights=None, *args, **kwargs):
         data = pd.DataFrame({' ': [' '] * height})
         temp = DataFrame(data, index=False, header=False)
         for k, v in temp.__dict__.items():
             setattr(self, k, v)
-        self.column_widths = [column_widths]
+        self.column_widths = [2.25]
         self.row_heights = [row_heights] * height
         self.kwargs = kwargs
 
     def _get_html(self, my_height=0, my_width=100):
-        return '<div style="' + self.container + 'width: auto;"><div style="' + \
-                self.label + '">CSpacer</div></div>\n'
+        return '<div class="xlccontainer-Spacer" style="width: auto;"><div class="xlclabel-Spacer">CSpacer</div></div>\n'
 
 
-class HSpacer(CSpacer):
-    pass
-
-
-class _Container(XLCBase):
+class _Container(_XLCBase):
     """ Base class for Row and Column """
-
-    container = """
-        border: 1px solid #DDDDDD;
-        padding: 25px 2px 0px;
-    """ + XLCBase.container
-    label = """
-        background-color: #F5F5F5;
-        border: 1px solid #DDDDDD;
-        color: #9DA0A4;
-    """ + XLCBase.label
 
     def __init__(self, *args, **kwargs):
         self.args = tuple([copy.deepcopy(item) for item in args])
@@ -835,14 +755,12 @@ class Row(_Container):
         contents = []
         for num in range(len(self.args)):
             if self.args[num].__class__.__name__ == 'RSpacer':
-
                 contents.append(self.args[num]._get_html(max(heights), widths[num]))
             else:
                 contents.append(self.args[num]._get_html(heights[num], widths[num]))
         contents = ''.join(contents)
         width = 'width:' + str(my_width) + '%;' if my_width < 100 else 'width: auto;'
-        return '<div style="' + self.container + width + '"><div style="' + \
-                self.label + '">Row</div>' + contents + '</div>\n'
+        return '<div class="xlccontainer-Container" style="' + width + '"><div class="xlclabel-Container">Row</div>' + contents + '</div>\n'
 
 
 class Column(_Container):
@@ -917,11 +835,11 @@ class Column(_Container):
             contents.append(self.args[num]._get_html(heights[num], widths[num]))
         contents = ''.join(contents)
         width = 'width:' + str(my_width) + '%;' if my_width < 100 else 'width: auto;'
-        return '<div style="' + self.container + ';flex-direction: column;' + \
-                width + ';"><div style="' + self.label + '">Column</div>' + \
+        return '<div class="xlccontainer-Container" style="flex-direction: column;' + \
+                width + ';"><div class="xlclabel-Container">Column</div>' + \
                 contents + '</div>\n'
 
-class Tabs(XLCBase):
+class Tabs(_XLCBase):
     """
     A container object representing multiple worksheets.
 
@@ -947,7 +865,7 @@ class Tabs(XLCBase):
         return len(self.args)
 
 
-class Sheet(XLCBase):
+class Sheet(_XLCBase):
     """
     A container object representing an Excel worksheet.
 
@@ -1012,3 +930,9 @@ class Sheet(XLCBase):
 
     def _repr_html_(self):
         return self.layout._repr_html_()
+
+class VSpacer(RSpacer):
+    pass
+
+class HSpacer(CSpacer):
+    pass
