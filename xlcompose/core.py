@@ -849,7 +849,8 @@ class Tabs(_XLCBase):
         A list of sheets or a tuple with a sheet name and any xlcompose object.
         For example, `('sheet1', xlc.DataFrame(data))`
     """
-
+    _repr_html_ = None
+        
     def __init__(self, *args, **kwargs):
         self.args = [
             Sheet(item[0], copy.deepcopy(item[1]))
