@@ -217,7 +217,7 @@ class _Workbook:
         else:
             headers = exhibit.data.columns
         if exhibit.index:
-            headers = [exhibit.index_label]+list(header)
+            headers = [exhibit.index_label]+list(headers)
         header_format = self.default_formats.copy()
         header_format.update(exhibit.header_formats)
         header_format = self.writer.book.add_format(header_format)
