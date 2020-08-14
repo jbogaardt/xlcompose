@@ -213,9 +213,9 @@ class _Workbook:
     def _write_header(self, exhibit):
         ''' Adds column headers to data table '''
         if type(exhibit.data.columns) == pd.PeriodIndex:
-            header = exhibit.data.columns.astype(str)
+            headers = exhibit.data.columns.astype(str)
         else:
-            header = exhibit.data.columns
+            headers = exhibit.data.columns
         if exhibit.index:
             headers = [exhibit.index_label]+list(header)
         header_format = self.default_formats.copy()
