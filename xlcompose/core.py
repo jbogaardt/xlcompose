@@ -212,10 +212,12 @@ class _Workbook:
 
     def _write_header(self, exhibit):
         ''' Adds column headers to data table '''
-        if not exhibit.index:
-            headers = exhibit.data.columns
+        if type(exhibit.data.columns) == pd.PeriodIndex:
+            header = exhibit.data.columns.astype(str)
         else:
-            headers = [exhibit.index_label]+list(exhibit.data.columns)
+            header = exhibit.data.columns
+        if exhibit.index:
+            headers = [exhibit.index_label]+list(header)
         header_format = self.default_formats.copy()
         header_format.update(exhibit.header_formats)
         header_format = self.writer.book.add_format(header_format)
@@ -850,7 +852,7 @@ class Tabs(_XLCBase):
         For example, `('sheet1', xlc.DataFrame(data))`
     """
     _repr_html_ = None
-        
+
     def __init__(self, *args, **kwargs):
         self.args = [
             Sheet(item[0], copy.deepcopy(item[1]))
