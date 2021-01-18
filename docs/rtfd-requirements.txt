@@ -1,4 +1,0 @@
-xlsxwriter
-pandas
-numpy
-numpydoc

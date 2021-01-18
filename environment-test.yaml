@@ -1,0 +1,14 @@
+# The basic requirements for developing xlcompose docs
+name: xlc_test
+
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - xlsxwriter>=1.1.8
+  - pandas
+  - pyyaml
+  - jinja2
+  - pytest
+  - pytest-cov

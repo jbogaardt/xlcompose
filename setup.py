@@ -5,6 +5,9 @@
 from setuptools import setup, find_packages
 from os import listdir
 
+with open('requirements.txt', 'r') as f:
+    dependencies = f.read().splitlines()
+
 descr = "A declarative API for composing spreadsheets from python"
 name = 'xlcompose'
 url = 'https://github.com/jbogaardt/xlcompose'
@@ -24,10 +27,5 @@ setup(
     include_package_data=True,
     description=descr,
     # long_description=open('README.md').read(),
-    install_requires=[
-        "pandas",
-        "xlsxwriter>=1.1.8",
-        "pyyaml",
-        "jinja2"
-    ],
+    install_requires=[dependencies],
 )
