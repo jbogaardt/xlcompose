@@ -1,5 +1,8 @@
-[![Documentation Status](https://readthedocs.org/projects/xlcompose/badge/?version=latest)](https://xlcompose.readthedocs.io/en/latest/?badge=latest)
-
+[![PyPI version](https://badge.fury.io/py/xlcompose.svg)](https://badge.fury.io/py/xlcompose)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/xlcompose.svg)](https://anaconda.org/conda-forge/xlcompose)
+![Build Status](https://github.com/jbogaardt/xlcompose/workflows/Unit%20Tests/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/xlcompose/badge/?version=latest)](http://xlcompose.readthedocs.io/en/latest/?badge=latest)
+[![codecov.io](https://codecov.io/github/jbogaardt/xlcompose/coverage.svg?branch=master)](https://codecov.io/github/jbogaardt/xlcompose?branch=master)
 # xlcompose
 A declarative API for composing spreadsheets from python that is built on
 `xlsxwriter`, `pandas` and inspired web design.
@@ -57,6 +60,9 @@ code documentation.
 ## Installation
 To install using pip:
 `pip install xlcompose`
+
+To install using conda:
+`conda install -c conda-forge xlcompose`
 
 Alternatively, install directly from github:
 `pip install git+https://github.com/jbogaardt/xlcompose/`

@@ -23,7 +23,6 @@ import os
 # absolute, like shown here.
 sys.path.insert(0, os.path.abspath('sphinxext'))
 import warnings
-import xlcompose as xlc
 
 # -- Project information -----------------------------------------------------
 
