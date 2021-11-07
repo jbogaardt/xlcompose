@@ -461,7 +461,7 @@ class Image(_XLCBase):
     """
 
     def __init__(self, data, width=1, height=1, formats={}, *args, **kwargs):
-        if data.__class__.__name__ == 'AxesSubplot':
+        if data.__class__.__name__ in ['AxesSubplot', 'Figure']:
             #inch_to_row = 0.01431127
             #inch_to_col = 0.077469335
             #img_shape = data.get_figure().get_size_inches()

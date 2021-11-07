@@ -1,4 +1,4 @@
-__version__ = '0.2.4'
+__version__ = '0.3.0'
 from xlcompose.core import (
     Tabs, Sheet, Row, Column,
     DataFrame, Series, CSpacer, RSpacer, Title, Image, VSpacer, HSpacer)

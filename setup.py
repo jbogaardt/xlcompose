@@ -11,7 +11,7 @@ with open('requirements.txt', 'r') as f:
 descr = "A declarative API for composing spreadsheets from python"
 name = 'xlcompose'
 url = 'https://github.com/jbogaardt/xlcompose'
-version='0.2.4' # Put this in __init__.py
+version='0.3.0' # Put this in __init__.py
 
 data_path = ''
 setup(
