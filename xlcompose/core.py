@@ -461,10 +461,10 @@ class Image(_XLCBase):
     """
 
     def __init__(self, data, width=1, height=1, formats={}, *args, **kwargs):
-        if data.__class__.__name__=='AxesSubplot':
-            inch_to_row = 0.01431127
-            inch_to_col = 0.077469335
-            img_shape = data.get_figure().get_size_inches()
+        if data.__class__.__name__ == 'AxesSubplot':
+            #inch_to_row = 0.01431127
+            #inch_to_col = 0.077469335
+            #img_shape = data.get_figure().get_size_inches()
             imgdata = BytesIO()
             data.get_figure().savefig(imgdata, format="png")
             data = '_.png'
@@ -738,7 +738,7 @@ class Row(_Container):
             return self._row_heights
         data = np.array(
             [item.row_heights for item in self.args
-             if item.__class__.__name__ not in ['Title']])
+             if item.__class__.__name__ not in ['Title', 'Image']])
         lens = np.array([len(i) for i in data])
         mask = np.arange(lens.max()) < lens[:,None]
         out = np.zeros(mask.shape, dtype=data.dtype)
@@ -826,7 +826,7 @@ class Column(_Container):
 
     @row_heights.setter
     def row_heights(self, value):
-        self._row_heights = row_heights
+        self._row_heights = value
 
     def _get_html(self, my_height=100, my_width=100):
         direction = ''
@@ -926,7 +926,10 @@ class Sheet(_XLCBase):
     def __init__(self, name, layout, **kwargs):
         self.name = name
         self.kwargs = kwargs
-        self.layout = layout
+        if type(layout) is Image:
+            self.layout = Column(layout)
+        else:
+            self.layout = layout
         self.kwargs = kwargs
         self.column_widths = self.layout.column_widths
         self.row_heights = self.layout.row_heights

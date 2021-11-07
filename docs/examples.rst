@@ -120,13 +120,19 @@ As with everything else, formats are adjustable through the `formats` argument.
 
 Image
 -----
-Embedding images in Excel can be done with the `Image` class.  However, because
-images are not embedded in cells directly, you must specify the `width` and
-`height` of the image (in cells) for **xlcompose** to know how much room the image
-consumes.
+Embedding images in Excel can be done with the `Image` class.  Matplotlib axes 
+are supported as well.  Because Images are not directly embedded in cells, but rather 
+sit on top of them, you'll have to manage/reserve space for them.  This can be done using 
+the ``width`` and ``height`` arguments, which reserve the corresponding cells in Excel.
 
 **Example:**
-   >>> xlc.Image('logo.png', width=1, height=5).to_excel('workbook.xlsx')
+   >>> import xlcompose as xlc
+   >>> import pandas as pd
+   >>> import matplotlib.pyplot as plt
+   >>> plt.style.use('ggplot')
+   >>> 
+   >>> out = pd.Series([1,2,2.5,2,1]).plot(grid=True)
+   >>> xlc.Image(out, width=10).to_excel('out.xlsx')
 
 All objects have a `width` and `height` property.  These properties are used
 by **xlcompose** to manage placement in the spreadsheet using layout objects.
