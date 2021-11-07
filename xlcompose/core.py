@@ -438,7 +438,7 @@ class Series(Title):
     def _default_format(self):
         base_formats = copy.deepcopy(settings['base_formats'])
         return [base_formats.get(
-                    str(self.data[0].dtype), base_formats['object'])
+                    str(self.data.iloc[0].dtype), base_formats['object'])
                 ] * len(self.data)
 
 
