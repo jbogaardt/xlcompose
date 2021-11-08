@@ -586,11 +586,11 @@ class DataFrame(_XLCBase):
             idx = self.data.index.to_frame().dtypes
             idx.index = [self.data.columns.name]
         else:
-            idx = pd.Series()
+            idx = pd.Series(dtype='object')
         cols = self.data.dtypes.append(idx)
         self.formats = {
             k: self.base_formats.get(v, self.base_formats['object'])
-            for k, v in dict(cols).items()}
+            for k, v in dict(zip(cols.index, cols.values)).items()}
         if type(formats) is list:
             self.formats.update(dict(zip(self.data.columns, formats)))
         elif type(formats) is str:
