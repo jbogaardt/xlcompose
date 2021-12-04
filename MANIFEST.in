@@ -1,3 +1,5 @@
 include xlcompose/settings.yaml
 include xlcompose/styles.css
 include LICENSE
+include requirements.txt
+include README.md
