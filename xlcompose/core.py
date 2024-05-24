@@ -587,7 +587,7 @@ class DataFrame(_XLCBase):
             idx.index = [self.data.columns.name]
         else:
             idx = pd.Series(dtype='object')
-        cols = self.data.dtypes.append(idx)
+        cols = pd.concat((self.data.dtypes, idx), axis=0)
         self.formats = {
             k: self.base_formats.get(v, self.base_formats['object'])
             for k, v in dict(zip(cols.index, cols.values)).items()}
@@ -804,7 +804,8 @@ class Column(_Container):
             return self._column_widths
         data = np.array(
             [item.column_widths for item in self.args
-             if item.__class__.__name__ not in ['Title']])
+             if item.__class__.__name__ not in ['Title']],
+             dtype='object')
         lens = np.array([len(i) for i in data])
         mask = np.arange(lens.max()) < lens[:,None]
         out = np.zeros(mask.shape, dtype=data.dtype)
