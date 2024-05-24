@@ -47,7 +47,7 @@ class _Workbook:
             self._write(sheet.layout, sheet.name)
             sheet.layout.kwargs.update(sheet.kwargs)
             self._set_worksheet_properties(sheet.layout, sheet.name)
-        self.writer.save()
+        self.writer.close()
 
 
     def _write(self, exhibit, sheet, start_row=0, start_col=0):
